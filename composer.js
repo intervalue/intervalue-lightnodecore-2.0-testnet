@@ -815,6 +815,7 @@ async function composeJointForJoint(params) {
 					if (Object.keys(assocPrivatePayloads).length === 0)
 						assocPrivatePayloads = null;
 					//profiler.stop('compose');
+					console.log(JSON.stringify(objJoint));
 					await callbacks.ifOk(objJoint, assocPrivatePayloads, unlock_callback);
 				}
 			);
@@ -1491,6 +1492,7 @@ function getSavingCallbacks(callbacks) {
 
 async function postJointToLightVendorIfNecessaryAndSaveForJoint(objJoint, onLightError, save) {
 	var network = require('./network.js');
+	console.log(JSON.stringify(objJoint));
 	let result = await network.sendTransaction(objJoint);
 	if (result.err) {
 		onLightError(result.err);

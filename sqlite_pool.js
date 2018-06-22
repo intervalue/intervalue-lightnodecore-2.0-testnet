@@ -452,6 +452,7 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 			await connection.query("COMMIT");
 		}
 		catch (e) {
+			console.log(e.toString());
 			await connection.query("ROLLBACK");
 		}
 		finally {

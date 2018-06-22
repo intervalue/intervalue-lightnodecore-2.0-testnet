@@ -67,10 +67,14 @@ function getUnitHash(objUnit) {
 }
 
 function getUnitHashToSign(objUnit) {
+	console.log(JSON.stringify(objUnit));
 	var objNakedUnit = getNakedUnit(objUnit);
 	for (var i = 0; i < objNakedUnit.authors.length; i++)
 		delete objNakedUnit.authors[i].authentifiers;
-	return crypto.createHash("sha256").update(getSourceString(objNakedUnit), "utf8").digest();
+	console.log(JSON.stringify(objNakedUnit));
+	let srcstr = getSourceString(objNakedUnit);
+	console.log(srcstr);
+	return crypto.createHash("sha256").update(srcstr, "utf8").digest();
 }
 
 function getBallHash(unit, arrParentBalls, arrSkiplistBalls, bNonserial) {

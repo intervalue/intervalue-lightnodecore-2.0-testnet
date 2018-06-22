@@ -16,7 +16,7 @@ var breadcrumbs = require('./breadcrumbs.js');
 var eventBus = require('./event_bus.js');
 var device = require('./device.js');
 var MAX_HISTORY_ITEMS = 1000;
-
+var conf = require("./conf.js");
 // unit's MC index is earlier_mci
 function buildProofChain(later_mci, earlier_mci, unit, arrBalls, onDone) {
 	if (earlier_mci === null)
@@ -403,10 +403,9 @@ async function updateHistory(trans) {
 	eventBus.emit('my_transactions_became_stable');
 }
 
-async function insertHistory(objJoint) {
-	var objUnit = objJoint.unit;
+async function insertHistory(objUnit) {
 	console.log("\nsaving unit " + objUnit.unit);
-
+	console.log(JSON.stringify(objUnit));
 	var cmds = [];
 
 	var fields = "unit, version, alt, headers_commission, payload_commission, sequence, content_hash";
@@ -415,16 +414,16 @@ async function insertHistory(objJoint) {
 	objUnit.headers_commission || 0, objUnit.payload_commission || 0, 'good', objUnit.content_hash];
 	if (conf.bLight) {
 		fields += ", main_chain_index, creation_date";
-		values += ",?," + conn.getFromUnixTime("?");
+		values += ",?," + db.getFromUnixTime("?");
 		params.push(objUnit.main_chain_index, objUnit.timestamp);
 	}
-	db.addCmd(cmds, "INSERT INTO units (" + fields + ") VALUES (" + values + ")", params);
+	db.addCmd(cmds, "INSERT INTO units (" + fields + ") VALUES (" + values + ")", ...params);
 
 	var bGenesis = storage.isGenesisUnit(objUnit.unit);
 	if (bGenesis) {
 		db.addCmd(cmds,
 			"UPDATE units SET is_on_main_chain=1, main_chain_index=0, is_stable=1, level=0, witnessed_level=0 \n\
-					WHERE unit=?", [objUnit.unit]);
+					WHERE unit=?", objUnit.unit);
 	}
 
 	var arrAuthorAddresses = [];
@@ -433,13 +432,13 @@ async function insertHistory(objJoint) {
 		arrAuthorAddresses.push(author.address);
 		var definition_chash = null;
 		db.addCmd(cmds, "INSERT INTO unit_authors (unit, address, definition_chash) VALUES(?,?,?)",
-			[objUnit.unit, author.address, definition_chash]);
+			objUnit.unit, author.address, definition_chash);
 		if (bGenesis)
-			db.addCmd(cmds, "UPDATE unit_authors SET _mci=0 WHERE unit=?", [objUnit.unit]);
+			db.addCmd(cmds, "UPDATE unit_authors SET _mci=0 WHERE unit=?", objUnit.unit);
 		if (!objUnit.content_hash) {
 			for (var path in author.authentifiers) {
 				db.addCmd(cmds, "INSERT INTO authentifiers (unit, address, path, authentifier) VALUES(?,?,?,?)",
-					[objUnit.unit, author.address, path, author.authentifiers[path]]);
+					objUnit.unit, author.address, path, author.authentifiers[path]);
 			}
 		}
 	}
@@ -457,8 +456,8 @@ async function insertHistory(objJoint) {
 			}
 			db.addCmd(cmds, "INSERT INTO messages \n\
 					(unit, message_index, app, payload_hash, payload_location, payload, payload_uri, payload_uri_hash) VALUES(?,?,?,?,?,?,?,?)",
-				[objUnit.unit, i, message.app, message.payload_hash, message.payload_location, text_payload,
-				message.payload_uri, message.payload_uri_hash]);
+				objUnit.unit, i, message.app, message.payload_hash, message.payload_location, text_payload,
+				message.payload_uri, message.payload_uri_hash);
 		}
 	}
 
@@ -466,8 +465,8 @@ async function insertHistory(objJoint) {
 		var message = objUnit.messages[i];
 		var payload = message.payload;
 		var denomination = payload.denomination || 1;
-		for (var j = 0; j < payload.inputs; j++) {
-			var input = payload.inputs[x];
+		for (var j = 0; j < payload.inputs.length; j++) {
+			var input = payload.inputs[j];
 			var type = input.type || "transfer";
 			var src_unit = (type === "transfer") ? input.unit : null;
 			var src_message_index = (type === "transfer") ? input.message_index : null;
@@ -482,18 +481,18 @@ async function insertHistory(objJoint) {
 				from_main_chain_index, to_main_chain_index, \n\
 				denomination, amount, serial_number, \n\
 				asset, is_unique, address) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-				[objUnit.unit, i, j, type,
-					src_unit, src_message_index, src_output_index,
-					from_main_chain_index, to_main_chain_index,
-					denomination, input.amount, input.serial_number,
-				payload.asset, is_unique, address]);
+				objUnit.unit, i, j, type,
+				src_unit, src_message_index, src_output_index,
+				from_main_chain_index, to_main_chain_index,
+				denomination, input.amount, input.serial_number,
+				payload.asset, is_unique, address);
 		}
-		for (var j = 0; j < payload.outputs; j++) {
+		for (var j = 0; j < payload.outputs.length; j++) {
 			var output = payload.outputs[j];
 			db.addCmd(cmds,
 				"INSERT INTO outputs \n\
 					(unit, message_index, output_index, address, amount, asset, denomination, is_serial) VALUES(?,?,?,?,?,?,?,1)",
-				[objUnit.unit, i, j, output.address, parseInt(output.amount), payload.asset, denomination]
+				objUnit.unit, i, j, output.address, parseInt(output.amount), payload.asset, denomination
 			);
 		}
 	}

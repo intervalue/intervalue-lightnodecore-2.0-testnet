@@ -10,10 +10,10 @@ var STRING_JOIN_CHAR = "\x00";
  */
 function getSourceString(obj) {
     var arrComponents = [];
-    function extractComponents(variable){
+    function extractComponents(variable) {
         if (variable === null)
-            throw Error("null value in "+JSON.stringify(obj));
-        switch (typeof variable){
+            throw Error("null value in " + JSON.stringify(obj));
+        switch (typeof variable) {
             case "string":
                 arrComponents.push("s", variable);
                 break;
@@ -24,33 +24,36 @@ function getSourceString(obj) {
                 arrComponents.push("b", variable.toString());
                 break;
             case "object":
-                if (Array.isArray(variable)){
+                if (Array.isArray(variable)) {
                     if (variable.length === 0)
-                        throw Error("empty array in "+JSON.stringify(obj));
+                        throw Error("empty array in " + JSON.stringify(obj));
                     arrComponents.push('[');
-                    for (var i=0; i<variable.length; i++)
+                    for (var i = 0; i < variable.length; i++)
                         extractComponents(variable[i]);
                     arrComponents.push(']');
                 }
-                else{
+                else {
                     var keys = Object.keys(variable).sort();
                     if (keys.length === 0)
-                        throw Error("empty object in "+JSON.stringify(obj));
-                    keys.forEach(function(key){
+                        throw Error("empty object in " + JSON.stringify(obj));
+                    keys.forEach(function (key) {
                         if (typeof variable[key] === "undefined")
-                            throw Error("undefined at "+key+" of "+JSON.stringify(obj));
+                            throw Error("undefined at " + key + " of " + JSON.stringify(obj));
                         arrComponents.push(key);
                         extractComponents(variable[key]);
                     });
                 }
                 break;
             default:
-                throw Error("hash: unknown type="+(typeof variable)+" of "+variable+", object: "+JSON.stringify(obj));
+                throw Error("hash: unknown type=" + (typeof variable) + " of " + variable + ", object: " + JSON.stringify(obj));
         }
     }
 
     extractComponents(obj);
-    return arrComponents.join(STRING_JOIN_CHAR);
+    console.log(JSON.stringify(arrComponents));
+    let re = arrComponents.join(STRING_JOIN_CHAR);
+    console.log(re);
+    return re;
 }
 
 exports.STRING_JOIN_CHAR = STRING_JOIN_CHAR; // for tests
