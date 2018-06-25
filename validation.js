@@ -93,7 +93,7 @@ async function validateForJoint(objJoint, callbacks) {
 			return callbacks.ifJointError("content_hash allowed only in finished ball");
 	}
 	else { // serial
-		if (hasFieldsExcept(objUnit, ["unit", "version", "alt", "timestamp", "authors", "messages", "witness_list_unit", "witnesses", "earned_headers_commission_recipients", "last_ball", "last_ball_unit", "parent_units", "headers_commission", "payload_commission"]))
+		if (hasFieldsExcept(objUnit, ["unit", "walletId", "version", "alt", "timestamp", "authors", "messages", "witness_list_unit", "witnesses", "earned_headers_commission_recipients", "last_ball", "last_ball_unit", "parent_units", "headers_commission", "payload_commission"]))
 			return callbacks.ifUnitError("unknown fields in unit");
 
 		if (typeof objUnit.headers_commission !== "number")

@@ -10,7 +10,7 @@ class HashnetHelper {
         let ic;
         try {
             ic = ice.initialize();
-            const base = ic.stringToProxy("Light2local:default -h 13.124.218.43 -p 20000");
+            const base = ic.stringToProxy("Light2local:default -h 192.168.0.120 -p 20000");
             const light2local = await rpc.localfullnode.Light2localPrx.checkedCast(base);
             if (light2local) {
                 let balance = await light2local.getBalance();
@@ -70,16 +70,18 @@ class HashnetHelper {
         }
     }
 
-    static async sendMessageDirect(pubkey, walletId, unit) {
+    static async sendMessageDirect(pubkey, unit) {
         let localfullnode = await buildSingleLocalfullnode(pubkey);
-        let result = await HashnetHelper.sendMessage(localfullnode, walletId, unit);
+        console.log("sending unit:");
+        console.log(JSON.stringify(unit));
+        let result = await HashnetHelper.sendMessage(localfullnode, unit);
         return result;
     }
 
-    static async sendMessage(localfullnode, walletId, unit) {
+    static async sendMessage(localfullnode, unit) {
         let { ic, light2local } = await buildLight2Local(localfullnode);
         console.log("sendMessage result: ");
-        let result = await handleLight2Local(ic, light2local, light2local.sendMessage(walletId, unit));
+        let result = await handleLight2Local(ic, light2local, light2local.sendMessage(unit));
         console.log(result);
         return result;
     }
@@ -125,6 +127,34 @@ class HashnetHelper {
         console.log(result);
         return result;
     }
+
+    static async getUnitInfoListDirect(pubkey, walletId) {
+        let localfullnode = await buildSingleLocalfullnode(pubkey);
+        let result = await HashnetHelper.getUnitInfoList(localfullnode, walletId);
+        return result;
+    }
+
+    static async getUnitInfoList(localfullnode, walletId) {
+        let { ic, light2local } = await buildLight2Local(localfullnode);
+        console.log("getUnitInfoList result: ");
+        let result = await handleLight2Local(ic, light2local, light2local.getUnitInfoList(walletId));
+        console.log(result);
+        return result;
+    }
+
+    static async getUnitInfoDirect(pubkey, unitId) {
+        let localfullnode = await buildSingleLocalfullnode(pubkey);
+        let result = await HashnetHelper.getUnitInfo(localfullnode, unitId);
+        return result;
+    }
+
+    static async getUnitInfo(localfullnode, unitId) {
+        let { ic, light2local } = await buildLight2Local(localfullnode);
+        console.log("getUnitInfo result: ");
+        let result = await handleLight2Local(ic, light2local, light2local.getUnitInfo(unitId));
+        console.log(result);
+        return result;
+    }
 }
 
 module.exports = HashnetHelper;
@@ -152,7 +182,7 @@ let buildRegist = async () => {
     let ic = ice.initialize();
     console.log("try to get getLocalfullnodeList");
     console.log("try to get RegistPrx");
-    let base = ic.stringToProxy("Regist:default -h 13.124.218.43 -p 20001");
+    let base = ic.stringToProxy("Regist:default -h 192.168.0.120 -p 20000");
     let regist = await rpc.seed.RegistPrx.checkedCast(base);
     return { ic, regist };
 }

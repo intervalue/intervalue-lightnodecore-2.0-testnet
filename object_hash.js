@@ -24,6 +24,7 @@ function getBase64Hash(obj) {
 
 function getNakedUnit(objUnit) {
 	var objNakedUnit = _.cloneDeep(objUnit);
+	delete objNakedUnit.walletId;
 	delete objNakedUnit.unit;
 	delete objNakedUnit.headers_commission;
 	delete objNakedUnit.payload_commission;

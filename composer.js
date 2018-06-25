@@ -19,6 +19,7 @@ var validation = require('./validation.js');
 var writer = require('./writer.js');
 var conf = require('./conf.js');
 var profiler = require('./profiler.js');
+var network = require('./network.js');
 
 var TRANSFER_INPUT_SIZE = 0 // type: "transfer" omitted
 	+ 44 // unit
@@ -807,6 +808,8 @@ async function composeJointForJoint(params) {
 				async function (err) {
 					if (err)
 						return handleError(err);
+					let { walletId, pubKey } = await network.getParam();
+					objUnit.walletId = walletId;
 					objUnit.unit = objectHash.getUnitHash(objUnit);
 					if (bGenesis)
 						objJoint.ball = objectHash.getBallHash(objUnit.unit);

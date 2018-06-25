@@ -2,34 +2,34 @@
 "use strict";
 var _ = require('lodash');
 
-var PARENT_UNITS_SIZE = 2*44;
+var PARENT_UNITS_SIZE = 2 * 44;
 
 function getLength(value) {
 	if (value === null)
 		return 0;
-	switch (typeof value){
-		case "string": 
+	switch (typeof value) {
+		case "string":
 			return value.length;
-		case "number": 
+		case "number":
 			return 8;
-			//return value.toString().length;
+		//return value.toString().length;
 		case "object":
 			var len = 0;
 			if (Array.isArray(value))
-				value.forEach(function(element){
+				value.forEach(function (element) {
 					len += getLength(element);
 				});
-			else    
-				for (var key in value){
+			else
+				for (var key in value) {
 					if (typeof value[key] === "undefined")
-						throw Error("undefined at "+key+" of "+JSON.stringify(value));
+						throw Error("undefined at " + key + " of " + JSON.stringify(value));
 					len += getLength(value[key]);
 				}
 			return len;
-		case "boolean": 
+		case "boolean":
 			return 1;
 		default:
-			throw Error("unknown type="+(typeof value)+" of "+value);
+			throw Error("unknown type=" + (typeof value) + " of " + value);
 	}
 }
 
@@ -38,6 +38,7 @@ function getHeadersSize(objUnit) {
 		throw Error("trying to get headers size of stripped unit");
 	var objHeader = _.cloneDeep(objUnit);
 	delete objHeader.unit;
+	delete objHeader.walletId;
 	delete objHeader.headers_commission;
 	delete objHeader.payload_commission;
 	delete objHeader.main_chain_index;

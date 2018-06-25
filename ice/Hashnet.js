@@ -109,7 +109,9 @@
 
     Slice.defineOperations(one.inve.rpc.seed.Regist, one.inve.rpc.seed.RegistPrx, iceC_one_inve_rpc_seed_Regist_ids, 1,
     {
-        "getLocalfullnodeListInShard": [, , , , ["one.inve.rpc.seed.InShardLocalfullnodeListHelper"], [[7]], , , , ]
+        "getLocalfullnodeListInShard": [, , , , ["one.inve.rpc.seed.InShardLocalfullnodeListHelper"], [[7]], , , , ],
+        "getLocalfullnodeListByShardId": [, , , , ["one.inve.rpc.seed.InShardLocalfullnodeListHelper"], [[7]], , , , ],
+        "getShardInfo": [, , , , [7], [[7]], , , , ]
     });
 
     one.inve.rpc.localfullnode = _ModuleRegistry.module("one.inve.rpc.localfullnode");
@@ -142,51 +144,6 @@
 
     Slice.defineStruct(one.inve.rpc.localfullnode.Balance, true, false);
 
-    one.inve.rpc.localfullnode.Transaction = class
-    {
-        constructor(fromAddress = "", toAddress = "", amount = 0, fee = new Ice.Long(0, 0), unitId = "", time = new Ice.Long(0, 0), isStable = 0)
-        {
-            this.fromAddress = fromAddress;
-            this.toAddress = toAddress;
-            this.amount = amount;
-            this.fee = fee;
-            this.unitId = unitId;
-            this.time = time;
-            this.isStable = isStable;
-        }
-
-        _write(ostr)
-        {
-            ostr.writeString(this.fromAddress);
-            ostr.writeString(this.toAddress);
-            ostr.writeInt(this.amount);
-            ostr.writeLong(this.fee);
-            ostr.writeString(this.unitId);
-            ostr.writeLong(this.time);
-            ostr.writeInt(this.isStable);
-        }
-
-        _read(istr)
-        {
-            this.fromAddress = istr.readString();
-            this.toAddress = istr.readString();
-            this.amount = istr.readInt();
-            this.fee = istr.readLong();
-            this.unitId = istr.readString();
-            this.time = istr.readLong();
-            this.isStable = istr.readInt();
-        }
-
-        static get minWireSize()
-        {
-            return  27;
-        }
-    };
-
-    Slice.defineStruct(one.inve.rpc.localfullnode.Transaction, true, true);
-
-    Slice.defineSequence(one.inve.rpc.localfullnode, "TransactionListHelper", "one.inve.rpc.localfullnode.Transaction", false);
-
     one.inve.rpc.localfullnode.Hash = class
     {
         constructor(hash = "", hashMapSeed = 0)
@@ -215,44 +172,50 @@
 
     Slice.defineStruct(one.inve.rpc.localfullnode.Hash, true, true);
 
+    Slice.defineSequence(one.inve.rpc.localfullnode, "TransactionHelper", "Ice.ByteHelper", true);
+
+    Slice.defineSequence(one.inve.rpc.localfullnode, "TransactionListHelper", "one.inve.rpc.localfullnode.TransactionHelper", false);
+
+    Slice.defineSequence(one.inve.rpc.localfullnode, "SignatureHelper", "Ice.ByteHelper", true);
+
     one.inve.rpc.localfullnode.Event = class
     {
-        constructor(selfId = "", selfSeq = "", otherId = "", otherSeq = "", timeCreated = "", signature = "", transactions = null)
+        constructor(selfId = new Ice.Long(0, 0), selfSeq = new Ice.Long(0, 0), otherId = new Ice.Long(0, 0), otherSeq = new Ice.Long(0, 0), transactions = null, timeCreated = "", sign = null)
         {
             this.selfId = selfId;
             this.selfSeq = selfSeq;
             this.otherId = otherId;
             this.otherSeq = otherSeq;
-            this.timeCreated = timeCreated;
-            this.signature = signature;
             this.transactions = transactions;
+            this.timeCreated = timeCreated;
+            this.sign = sign;
         }
 
         _write(ostr)
         {
-            ostr.writeString(this.selfId);
-            ostr.writeString(this.selfSeq);
-            ostr.writeString(this.otherId);
-            ostr.writeString(this.otherSeq);
-            ostr.writeString(this.timeCreated);
-            ostr.writeString(this.signature);
+            ostr.writeLong(this.selfId);
+            ostr.writeLong(this.selfSeq);
+            ostr.writeLong(this.otherId);
+            ostr.writeLong(this.otherSeq);
             one.inve.rpc.localfullnode.TransactionListHelper.write(ostr, this.transactions);
+            ostr.writeString(this.timeCreated);
+            one.inve.rpc.localfullnode.SignatureHelper.write(ostr, this.sign);
         }
 
         _read(istr)
         {
-            this.selfId = istr.readString();
-            this.selfSeq = istr.readString();
-            this.otherId = istr.readString();
-            this.otherSeq = istr.readString();
-            this.timeCreated = istr.readString();
-            this.signature = istr.readString();
+            this.selfId = istr.readLong();
+            this.selfSeq = istr.readLong();
+            this.otherId = istr.readLong();
+            this.otherSeq = istr.readLong();
             this.transactions = one.inve.rpc.localfullnode.TransactionListHelper.read(istr);
+            this.timeCreated = istr.readString();
+            this.sign = one.inve.rpc.localfullnode.SignatureHelper.read(istr);
         }
 
         static get minWireSize()
         {
-            return  7;
+            return  35;
         }
     };
 
@@ -279,11 +242,58 @@
 
     Slice.defineOperations(one.inve.rpc.localfullnode.Local2local, one.inve.rpc.localfullnode.Local2localPrx, iceC_one_inve_rpc_localfullnode_Local2local_ids, 1,
     {
-        "gossipMyMaxSeqList4Consensus": [, , , , , [[7], [7], ["one.inve.rpc.localfullnode.LastSeqOneShardHelper"]], , , , ],
+        "gossipMyMaxSeqList4Consensus": [, , , , ["one.inve.rpc.localfullnode.EventListHelper"], [[7], [7], ["one.inve.rpc.localfullnode.LastSeqOneShardHelper"]], , , , ],
         "gossipHashGraph4Consensus": [, , , , , [[7], [7], ["one.inve.rpc.localfullnode.EventListHelper"]], , , , ],
-        "gossipMyMaxSeqList4Sync": [, , , , , [[7], [7], ["one.inve.rpc.localfullnode.LastSeqOutshardHelper"]], , , , ],
+        "gossipMyMaxSeqList4Sync": [, , , , ["one.inve.rpc.localfullnode.EventListHelper"], [[7], [7], [3], ["one.inve.rpc.localfullnode.LastSeqOneShardHelper"]], , , , ],
         "gossipHashGraph4Sync": [, , , , , [[7], [7], ["one.inve.rpc.localfullnode.EventListHelper"]], , , , ]
     });
+
+    one.inve.rpc.localfullnode.Ltransaction = class
+    {
+        constructor(fromAddress = "", toAddress = "", amount = new Ice.Long(0, 0), fee = new Ice.Long(0, 0), unitId = "", time = new Ice.Long(0, 0), isStable = 0)
+        {
+            this.fromAddress = fromAddress;
+            this.toAddress = toAddress;
+            this.amount = amount;
+            this.fee = fee;
+            this.unitId = unitId;
+            this.time = time;
+            this.isStable = isStable;
+        }
+
+        _write(ostr)
+        {
+            ostr.writeString(this.fromAddress);
+            ostr.writeString(this.toAddress);
+            ostr.writeLong(this.amount);
+            ostr.writeLong(this.fee);
+            ostr.writeString(this.unitId);
+            ostr.writeLong(this.time);
+            ostr.writeInt(this.isStable);
+        }
+
+        _read(istr)
+        {
+            this.fromAddress = istr.readString();
+            this.toAddress = istr.readString();
+            this.amount = istr.readLong();
+            this.fee = istr.readLong();
+            this.unitId = istr.readString();
+            this.time = istr.readLong();
+            this.isStable = istr.readInt();
+        }
+
+        static get minWireSize()
+        {
+            return  31;
+        }
+    };
+
+    Slice.defineStruct(one.inve.rpc.localfullnode.Ltransaction, true, true);
+
+    Slice.defineSequence(one.inve.rpc.localfullnode, "LtransactionListHelper", "one.inve.rpc.localfullnode.Ltransaction", false);
+
+    Slice.defineSequence(one.inve.rpc.localfullnode, "unitListHelper", "Ice.StringHelper", false);
 
     const iceC_one_inve_rpc_localfullnode_Light2local_ids = [
         "::Ice::Object",
@@ -300,10 +310,12 @@
 
     Slice.defineOperations(one.inve.rpc.localfullnode.Light2local, one.inve.rpc.localfullnode.Light2localPrx, iceC_one_inve_rpc_localfullnode_Light2local_ids, 1,
     {
-        "sendMessage": [, , , , [7], [[7], [7]], , , , ],
+        "sendMessage": [, , , , [7], [[7]], , , , ],
         "getBalance": [, , , , [one.inve.rpc.localfullnode.Balance], [[7]], , , , ],
-        "getTransactionHistory": [, , , , ["one.inve.rpc.localfullnode.TransactionListHelper"], [[7]], , , , ],
-        "getTransactionInfo": [, , , , [one.inve.rpc.localfullnode.Transaction], [[7]], , , , ]
+        "getTransactionHistory": [, , , , ["one.inve.rpc.localfullnode.LtransactionListHelper"], [[7]], , , , ],
+        "getTransactionInfo": [, , , , [one.inve.rpc.localfullnode.Ltransaction], [[7]], , , , ],
+        "getUnitInfoList": [, , , , ["one.inve.rpc.localfullnode.unitListHelper"], [[7]], , , , ],
+        "getUnitInfo": [, , , , [7], [[7]], , , , ]
     });
 
     one.inve.rpc.fullnode = _ModuleRegistry.module("one.inve.rpc.fullnode");

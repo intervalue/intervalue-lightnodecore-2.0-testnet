@@ -811,7 +811,6 @@ function fetchAssetMetadata(asset, handleMetadata) {
 }
 
 function readTransactionHistory(opts, handleHistory) {
-	console.log('111111111111111111111111111111111111111111111111111111111');
 	var asset = opts.asset && (opts.asset !== "base") ? opts.asset : null;
 	if (opts.wallet && opts.address || !opts.wallet && !opts.address)
 		throw Error('invalid wallet and address params');

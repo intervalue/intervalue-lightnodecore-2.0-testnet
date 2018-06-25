@@ -164,7 +164,7 @@ function migrateDb(connection, onDone) {
 
 async function migrateDbSync(connection) {
 	let result = await migrateDbResult(connection);
-	let err = !Array.isArray(result);
+	let err = !Array.isArray(bCordova ? result.rows : result);
 	if (err)
 		throw Error("PRAGMA user_version failed: " + err);
 	var rows = bCordova ? result.rows : result;
