@@ -423,21 +423,24 @@ async function updateHistory(address) {
 				insert_trans.push(tran.unitId);
 			}
 		}
-		if (update_trans.length > 0) {
-			await db.execute("update units set is_stable = 1 where unit in (?)", update_trans);
-		}
-		var i_bool = false;
-		if (insert_trans.length > 0) {
-			for (var unitId of insert_trans) {
-				let unit = await hashnethelper.getUnitInfo(unitId);
-				if (!(await insertHistory(unit.unit))) {
-					i_bool = true;
+		await mutex.lock(["write"], async function (unlock) {
+			if (update_trans.length > 0) {
+				await db.execute("update units set is_stable = 1 where unit in (?)", update_trans);
+			}
+			var i_bool = false;
+			if (insert_trans.length > 0) {
+				for (var unitId of insert_trans) {
+					let unit = await hashnethelper.getUnitInfo(unitId);
+					if (!(await insertHistory(unit.unit))) {
+						i_bool = true;
+					}
 				}
 			}
-		}
-		if (update_trans.length > 0 || i_bool) {
-			eventBus.emit('my_transactions_became_stable');
-		}
+			unlock();
+			if (update_trans.length > 0 || i_bool) {
+				eventBus.emit('my_transactions_became_stable');
+			}
+		});
 	}
 }
 
