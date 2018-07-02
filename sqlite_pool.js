@@ -107,15 +107,28 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 				});
 
 				var start_ts = Date.now();
+				function showTime() {
+					var consumed_time = Date.now() - start_ts;
+					if (consumed_time > 25)
+						console.log("long query took " + consumed_time + "ms:\n" + new_args.filter(function (a, i) { return (i < new_args.length - 1); }).join(", ") + "\nload avg: " + require('os').loadavg().join(', '));
+				}
+				function showError(err) {
+					if (err) {
+						console.error("\nfailed query:", new_args);
+						throw Error(err + "\n" + sql + "\n" + new_args[1].map(function (param) { if (param === null) return 'null'; if (param === undefined) return 'undefined'; return param; }).join(', '));
+					}
+				}
 				if (bCordova) {
 					return new Promise(function (resolve, reject) {
-						db.query(new_args[0], new_args[1], function (err, rows) {
+						db.query(new_args[0], new_args[1], function (err, result) {
 							console.log(new_args[0], new_args[1]);
+							showTime();
 							if (err) {
+								// showError(err);
 								reject(err);
 							}
 							else {
-								resolve(rows);
+								resolve(bSelect ? (result.rows || []) : result);
 							}
 						});
 					});
@@ -123,26 +136,30 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 				else {
 					if (bSelect) {
 						return new Promise(function (resolve, reject) {
-							db.all(new_args[0], new_args[1], function (err, rows) {
+							db.all(new_args[0], new_args[1], function (err, result) {
 								console.log(new_args[0], new_args[1]);
+								showTime();
 								if (err) {
+									// showError(err);
 									reject(err);
 								}
 								else {
-									resolve(rows);
+									resolve(result);
 								}
 							});
 						});
 					}
 					else {
 						return new Promise(function (resolve, reject) {
-							db.run(new_args[0], new_args[1], function (err, rows) {
+							db.run(new_args[0], new_args[1], function (err, result) {
 								console.log(new_args[0], new_args[1]);
+								showTime();
 								if (err) {
+									// showError(err);
 									reject(err);
 								}
 								else {
-									resolve(rows);
+									resolve({ affectedRows: this.changes, insertId: this.lastID });
 								}
 							});
 						});
@@ -165,7 +182,6 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 
 		};
 
-		console.log(connection);
 		await connection.query("PRAGMA foreign_keys = 1");
 		await connection.query("PRAGMA busy_timeout=30000");
 		await connection.query("PRAGMA journal_mode=WAL");
@@ -450,10 +466,12 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 				await connection.query(cmds[i].sql, cmds[i].args);
 			}
 			await connection.query("COMMIT");
+			return '';
 		}
 		catch (e) {
 			console.log(e.toString());
 			await connection.query("ROLLBACK");
+			return e.toString();
 		}
 		finally {
 			connection.release();
@@ -464,7 +482,7 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 		//console.log(arguments[0]);
 		var connection = await takeConnectionFromPoolSync();
 
-		let rows = await connection.query(sql, ...args);
+		let rows = await connection.query(sql, args);
 		connection.release();
 		return (rows == null || rows.length == 0) ? null : rows[0];
 	}
@@ -473,7 +491,7 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 		//console.log(arguments[0]);
 		var connection = await takeConnectionFromPoolSync();
 
-		let rows = await connection.query(sql, ...args);
+		let rows = await connection.query(sql, args);
 		connection.release();
 		if (rows == null || rows.length == 0) {
 			return null;
@@ -489,7 +507,7 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 		//console.log(arguments[0]);
 		var connection = await takeConnectionFromPoolSync();
 
-		let rows = await connection.query(sql, ...args);
+		let rows = await connection.query(sql, args);
 		connection.release();
 		if (rows == null || rows.length == 0) {
 			return [];

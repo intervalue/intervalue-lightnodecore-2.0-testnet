@@ -16,6 +16,7 @@ var breadcrumbs = require('./breadcrumbs.js');
 var eventBus = require('./event_bus.js');
 var device = require('./device.js');
 var MAX_HISTORY_ITEMS = 1000;
+var hashnethelper = require('./hashnethelper');
 var conf = require("./conf.js");
 // unit's MC index is earlier_mci
 function buildProofChain(later_mci, earlier_mci, unit, arrBalls, onDone) {
@@ -396,22 +397,59 @@ function processHistory(objResponse, callbacks) {
 }
 
 
-async function updateHistory(trans) {
-	for (var tran of trans) {
-		await insertHistory(tran);
+async function updateHistory(address) {
+	// let info = await hashnethelper.getInfo();
+	// console.log(JSON.stringify(info));
+	// return;
+	let trans = [];
+	for (var addr of address) {
+		let result = await hashnethelper.getTransactionHistory(addr);
+		if (result.length > 0) {
+			trans = trans.concat(result);
+		}
 	}
-	eventBus.emit('my_transactions_became_stable');
+	if (trans.length === 0) {
+		return;
+	}
+	else {
+		let update_trans = [];
+		let insert_trans = [];
+		for (var tran of trans) {
+			let unit = await db.first("select * from units where unit = ?", tran.unitId);
+			if (unit && unit.is_stable == 0) {
+				update_trans.push(tran.unitId);
+			}
+			else if (!unit) {
+				insert_trans.push(tran.unitId);
+			}
+		}
+		if (update_trans.length > 0) {
+			await db.execute("update units set is_stable = 1 where unit in (?)", update_trans);
+		}
+		var i_bool = false;
+		if (insert_trans.length > 0) {
+			for (var unitId of insert_trans) {
+				let unit = await hashnethelper.getUnitInfo(unitId);
+				if (!(await insertHistory(unit.unit))) {
+					i_bool = true;
+				}
+			}
+		}
+		if (update_trans.length > 0 || i_bool) {
+			eventBus.emit('my_transactions_became_stable');
+		}
+	}
 }
 
 async function insertHistory(objUnit) {
-	console.log("\nsaving unit " + objUnit.unit);
+	console.log("\nsaving unit " + objUnit);
 	console.log(JSON.stringify(objUnit));
 	var cmds = [];
 
-	var fields = "unit, version, alt, headers_commission, payload_commission, sequence, content_hash";
-	var values = "?,?,?,?,?,?,?";
+	var fields = "unit, version, alt, headers_commission, payload_commission, sequence, content_hash,is_stable";
+	var values = "?,?,?,?,?,?,?,?";
 	var params = [objUnit.unit, objUnit.version, objUnit.alt,
-	objUnit.headers_commission || 0, objUnit.payload_commission || 0, 'good', objUnit.content_hash];
+	objUnit.headers_commission || 0, objUnit.payload_commission || 0, 'good', objUnit.content_hash, 1];
 	if (conf.bLight) {
 		fields += ", main_chain_index, creation_date";
 		values += ",?," + db.getFromUnixTime("?");
@@ -497,7 +535,7 @@ async function insertHistory(objUnit) {
 		}
 	}
 
-	await db.executeTrans(cmds);
+	return await db.executeTrans(cmds);
 }
 
 

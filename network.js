@@ -25,7 +25,7 @@ var light = require('./light.js');
 var device = require('./device.js');
 var breadcrumbs = require('./breadcrumbs.js');
 var mail = process.browser ? null : require('./mail.js' + '');
-// var hashnethelper = require('./ice/hashnethelper.js');
+var hashnethelper = require('./hashnethelper');
 var FORWARDING_TIMEOUT = 10 * 1000; // don't forward if the joint was received more than FORWARDING_TIMEOUT ms ago
 var STALLED_TIMEOUT = 5000; // a request is treated as stalled if no response received within STALLED_TIMEOUT ms
 var RESPONSE_TIMEOUT = 300 * 1000; // after this timeout, the request is abandoned
@@ -538,6 +538,7 @@ function addPeerHost(host, onDone) {
 }
 
 function addPeer(peer) {
+	return;
 	if (assocKnownPeers[peer])
 		return;
 	assocKnownPeers[peer] = true;
@@ -567,6 +568,7 @@ function getPeerWebSocket(peer) {
 }
 
 function findOutboundPeerOrConnect(url, onOpen) {
+	return;
 	if (!url)
 		throw Error('no url');
 	if (!onOpen)
@@ -1899,47 +1901,29 @@ function requestProofsOfJointsIfNewOrUnstable(arrUnits, onDone) {
 	});
 }
 
-let pubKey = '';
-let walletId = '';
-let getParam = async () => {
-	if (!pubKey || !walletId) {
-		let address = device.getMyDeviceAddress();
-		let result = await db.first('select a.* from my_addresses a inner join wallet_signing_paths b on a.wallet = b.wallet where b.device_address = ?', address);
-		pubKey = JSON.parse(result.definition)[1].pubkey;
-		walletId = result.wallet;
-	}
-}
-
 async function sendTransaction(unit) {
-	await getParam();
-	return await hashnethelper.sendMessageDirect(pubKey, walletId, unit);
+	return await hashnethelper.sendMessage(unit);
 }
 
 async function requestTransactionHistory() {
-	await getParam();
-	// let trans = await hashnethelper.getTransactionHistoryDirect(pubKey, walletId);
-	let payload = {
-		denomination: '1',
-		asset: null,
-		inputs: [{
-			type: 'transfer', unit: 'k1/aFPu2f6IY6mdK3ortNbaoJ/mpGEaqanS5Fj0B5Wc=', message_index: '0', output_index: '0',
-			from_main_chain_index: null, to_main_chain_index: null, address: '7LSATFWHGBNI5IKCOB62SD3RVIURTAHF'
-		}], outputs: [{ address: '7LSATFWHGBNI5IKCOB62SD3RVIURTAHF', amount: '98988888998912' }, { address: 'PT4BTS4EPBWSOQYZHZAMK52PUJ3JAAPW', amount: '11111000000' }]
-	};
-	let messages = [{ app: 'payment', payload, payload_hash: 'TFeKInWcOTSn4+0m5r1ufii3vuRVMGryKansz7Hv+rs=', payload_location: 'inline', payload_uri: null, payload_uri_hash: null }];
-	let authors = [{ address: '7LSATFWHGBNI5IKCOB62SD3RVIURTAHF', authentifiers: { r: 'zvqdxjYS9u2/C0gfSnBJaS7d1VnVP3zltiwHvKi51KhEq0QCME7c4PlU69d1hGlPTNKchRCzHy/F/Ro0GnwTgw==' } }];
-	let trans = {
-		result: [{
-			unit: 'eeC7xpOswlPSM2fBgYkyuXbLOb1efPuUpfoX2n1ctZc=', version: '1.0dev', alt: '3', headers_commission: '347', payload_commission: '197',
-			content_hash: null, main_chain_index: '872', timestamp: '1529552802', authors, messages
-		}]
-	};
-	if (trans.err) {
-		console.log(trans.err);
-	}
-	else {
-		await light.updateHistory(trans.result);
-	}
+	// let payload = {
+	// 	denomination: '1',
+	// 	asset: null,
+	// 	inputs: [{
+	// 		type: 'transfer', unit: 'k1/aFPu2f6IY6mdK3ortNbaoJ/mpGEaqanS5Fj0B5Wc=', message_index: '0', output_index: '0',
+	// 		from_main_chain_index: null, to_main_chain_index: null, address: '7LSATFWHGBNI5IKCOB62SD3RVIURTAHF'
+	// 	}], outputs: [{ address: '7LSATFWHGBNI5IKCOB62SD3RVIURTAHF', amount: '98988888998912' }, { address: 'PT4BTS4EPBWSOQYZHZAMK52PUJ3JAAPW', amount: '11111000000' }]
+	// };
+	// let messages = [{ app: 'payment', payload, payload_hash: 'TFeKInWcOTSn4+0m5r1ufii3vuRVMGryKansz7Hv+rs=', payload_location: 'inline', payload_uri: null, payload_uri_hash: null }];
+	// let authors = [{ address: '7LSATFWHGBNI5IKCOB62SD3RVIURTAHF', authentifiers: { r: 'zvqdxjYS9u2/C0gfSnBJaS7d1VnVP3zltiwHvKi51KhEq0QCME7c4PlU69d1hGlPTNKchRCzHy/F/Ro0GnwTgw==' } }];
+	// let trans = {
+	// 	result: [{
+	// 		unit: 'eeC7xpOswlPSM2fBgYkyuXbLOb1efPuUpfoX2n1ctZc=', version: '1.0dev', alt: '3', headers_commission: '347', payload_commission: '197',
+	// 		content_hash: null, main_chain_index: '872', timestamp: '1529552802', authors, messages
+	// 	}]
+	// };
+	let { address } = await device.getInfo();
+	await light.updateHistory(address);
 }
 
 // light only
@@ -2827,19 +2811,19 @@ function startRelay() {
 
 function startLightClient() {
 	wss = { clients: [] };
-	rerequestLostJointsOfPrivatePayments();
-	setInterval(rerequestLostJointsOfPrivatePayments, 5 * 1000);
-	setInterval(handleSavedPrivatePayments, 5 * 1000);
-	setInterval(requestUnfinishedPastUnitsOfSavedPrivateElements, 12 * 1000);
-	setInterval(requestTransactionHistory, 20 * 1000);
+	// rerequestLostJointsOfPrivatePayments();
+	// setInterval(rerequestLostJointsOfPrivatePayments, 5 * 1000);
+	// setInterval(handleSavedPrivatePayments, 5 * 1000);
+	// setInterval(requestUnfinishedPastUnitsOfSavedPrivateElements, 12 * 1000);
+	setInterval(requestTransactionHistory, 10 * 1000);
 }
 
 function start() {
 	console.log("starting network");
 	conf.bLight ? startLightClient() : startRelay();
-	setInterval(printConnectionStatus, 6 * 1000);
+	// setInterval(printConnectionStatus, 6 * 1000);
 	// if we have exactly same intervals on two clints, they might send heartbeats to each other at the same time
-	setInterval(heartbeat, 3 * 1000 + getRandomInt(0, 1000));
+	// setInterval(heartbeat, 3 * 1000 + getRandomInt(0, 1000));
 }
 
 function closeAllWsConnections() {

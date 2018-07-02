@@ -1,1 +1,0 @@
-slice2js Hashnet.ice
