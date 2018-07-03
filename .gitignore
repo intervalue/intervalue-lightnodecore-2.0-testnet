@@ -1,6 +1,6 @@
 #ide
-.idea/*
-.vscode/*
+.idea
+.vscode
 
 # version
 src/js/version.js
@@ -15,4 +15,5 @@ public/partialClient.js
 
 
 #node_modules
-node_modules/*
+node_modules
+bower_components
