@@ -5,9 +5,6 @@
 # version
 src/js/version.js
 
-#package-lock.json
-package-lock.json
-
 #public
 public/angular.js
 public/intervalue.js

@@ -24,7 +24,8 @@ class HashnetHelper {
     }
 
     static async getLocalfullnodeList(pubKey) {
-        let localfullnodeList = await webHelper.httpPost('http://192.168.0.120:20002/getLocalfullnodeListInShard/', null, buildData({ pubKey }));
+        let localfullnodeList = await webHelper.httpPost('http://192.168.0.88:20002/getLocalfullnodeListInShard/', null, buildData({ pubKey }));
+        // let localfullnodeList = await webHelper.httpPost('http://132.124.218.43:20002/getLocalfullnodeListInShard/', null, buildData({ pubKey }));
         if (localfullnodeList) {
             return JSON.parse(localfullnodeList);
         }
