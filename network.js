@@ -1926,6 +1926,10 @@ async function requestTransactionHistory() {
 	await light.updateHistory(address);
 }
 
+function initialLocalfullnodeList() {
+	hashnethelper.initialLocalfullnodeList();
+}
+
 // light only
 function requestUnfinishedPastUnitsOfSavedPrivateElements() {
 	mutex.lock(['private_chains'], function (unlock) {
@@ -2865,7 +2869,7 @@ exports.requestFromLightVendor = requestFromLightVendor;
 exports.addPeer = addPeer;
 
 exports.initWitnessesIfNecessary = initWitnessesIfNecessary;
-
+exports.initialLocalfullnodeList = initialLocalfullnodeList;
 exports.setMyDeviceProps = setMyDeviceProps;
 
 exports.setWatchedAddresses = setWatchedAddresses;

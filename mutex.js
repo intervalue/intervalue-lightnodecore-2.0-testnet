@@ -46,7 +46,7 @@ async function exec(arrKeys, proc, next_proc) {
 		release(arrKeys);
 		console.log("lock released", arrKeys);
 		if (next_proc) {
-			next_proc.apply(next_proc, arguments);
+			await next_proc.apply(next_proc, arguments);
 		}
 		await handleQueue();
 	});

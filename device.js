@@ -21,7 +21,7 @@ var TEMP_DEVICE_KEY_ROTATION_PERIOD = 3600 * 1000;
 var my_device_hub;
 var my_device_name;
 var my_device_address;
-
+var my_device_hashnetseed_url = "http://192.168.0.88:20002";
 var objMyPermanentDeviceKey;
 var objMyTempDeviceKey;
 var objMyPrevTempDeviceKey;
@@ -133,6 +133,15 @@ function setDeviceHub(device_hub) {
 	if (bChanged) {
 		network.addPeer(conf.WS_PROTOCOL + device_hub);
 		loginToHub();
+	}
+}
+
+function setHashnetSeedUrl(hashnetseed_url) {
+	console.log("setHashnetSeedUrl", hashnetseed_url);
+	var bChanged = (my_device_hashnetseed_url !== hashnetseed_url);
+	my_device_hashnetseed_url = hashnetseed_url;
+	if (bChanged) {
+		network.initialLocalfullnodeList();
 	}
 }
 
@@ -763,7 +772,8 @@ exports.setDeviceAddress = setDeviceAddress;
 exports.setNewDeviceAddress = setNewDeviceAddress;
 exports.setDeviceName = setDeviceName;
 exports.setDeviceHub = setDeviceHub;
-
+exports.my_device_hashnetseed_url = my_device_hashnetseed_url;
+exports.setHashnetSeedUrl = setHashnetSeedUrl;
 exports.scheduleTempDeviceKeyRotation = scheduleTempDeviceKeyRotation;
 
 exports.decryptPackage = decryptPackage;

@@ -2,7 +2,7 @@
 "use strict";
 require('./enforce_singleton.js');
 
-function mergeExports(anotherModule){
+function mergeExports(anotherModule) {
 	for (var key in anotherModule)
 		exports[key] = anotherModule[key];
 }
@@ -38,7 +38,6 @@ exports.port = null;
 
 // WebSocket protocol prefixed to all hosts.  Must be wss:// on livenet, ws:// is allowed on testnet
 exports.WS_PROTOCOL = "wss://";
-
 exports.MAX_INBOUND_CONNECTIONS = 100;
 exports.MAX_OUTBOUND_CONNECTIONS = 100;
 exports.MAX_TOLERATED_INVALID_RATIO = 0.1; // max tolerated ratio of invalid to good joints
@@ -51,7 +50,7 @@ exports.bIgnoreUnpairRequests = false;
 
 // storage engine: mysql or sqlite
 exports.storage = 'sqlite';
-if (process.browser){
+if (process.browser) {
 	exports.storage = 'sqlite';
 	exports.bLight = true;
 }
@@ -70,46 +69,46 @@ The later require()s of this conf will see the modified version.
 This way is not recommended as the code becomes loading order dependent.
 */
 
-if (typeof window === 'undefined' || !window.cordova){ // desktop
-	var desktopApp = require('./desktop_app.js'+'');
-	
+if (typeof window === 'undefined' || !window.cordova) { // desktop
+	var desktopApp = require('./desktop_app.js' + '');
+
 	// merge conf from other modules that include us as lib.  The other module must place its custom conf.js into its root directory
 	var appRootDir = desktopApp.getAppRootDir();
 	var appPackageJson = require(appRootDir + '/package.json');
 	exports.program = appPackageJson.name;
 	exports.program_version = appPackageJson.version;
-	if (appRootDir !== __dirname){
-		try{
+	if (appRootDir !== __dirname) {
+		try {
 			mergeExports(require(appRootDir + '/conf.js'));
 			console.log('merged app root conf from ' + appRootDir + '/conf.js');
 		}
-		catch(e){
-			console.log("not using app root conf: "+e);
+		catch (e) {
+			console.log("not using app root conf: " + e);
 		}
 	}
 	else
 		console.log("I'm already at the root");
-	
+
 	// merge conf from user home directory, if any.
 	// Note that it is json rather than js to avoid code injection
 	var appDataDir = desktopApp.getAppDataDir();
-	try{
+	try {
 		mergeExports(require(appDataDir + '/conf.json'));
 		console.log('merged user conf from ' + appDataDir + '/conf.json');
 	}
-	catch(e){
-		console.log('not using user conf: '+e);
+	catch (e) {
+		console.log('not using user conf: ' + e);
 	}
 }
 
 // after merging the custom confs, set defaults if they are still not set
-if (exports.storage === 'mysql'){
+if (exports.storage === 'mysql') {
 	exports.database.max_connections = exports.database.max_connections || 30;
 	exports.database.host = exports.database.host || 'localhost';
 	exports.database.name = exports.database.name || 'intervalue';
 	exports.database.user = exports.database.user || 'intervalue';
 }
-else if (exports.storage === 'sqlite'){
+else if (exports.storage === 'sqlite') {
 	exports.database.max_connections = exports.database.max_connections || 1;
 	exports.database.filename = exports.database.filename || (exports.bLight ? 'intervalue-light.sqlite' : 'intervalue.sqlite');
 }

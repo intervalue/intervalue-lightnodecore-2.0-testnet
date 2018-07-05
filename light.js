@@ -218,51 +218,51 @@ function prepareHistory(historyRequest, callbacks) {
 
 		mutex.lock(['prepareHistory'], function (unlock) {
 			var start_ts = Date.now();
-			// witnessProof.prepareWitnessProof(
-			// 	arrWitnesses, 0,
-			// 	function (err, arrUnstableMcJoints, arrWitnessChangeAndDefinitionJoints, last_ball_unit, last_ball_mci) {
-			// 		if (err) {
-			// 			callbacks.ifError(err);
-			// 			return unlock();
-			// 		}
-			// 		objResponse.unstable_mc_joints = arrUnstableMcJoints;
-			// 		if (arrWitnessChangeAndDefinitionJoints.length > 0)
-			// 			objResponse.witness_change_and_definition_joints = arrWitnessChangeAndDefinitionJoints;
-            //
-			// 		// add my joints and proofchain to those joints
-			// 		objResponse.joints = [];
-			// 		objResponse.proofchain_balls = [];
-			// 		var later_mci = last_ball_mci + 1; // +1 so that last ball itself is included in the chain
-			// 		async.eachSeries(
-			// 			rows,
-			// 			function (row, cb2) {
-			// 				storage.readJoint(db, row.unit, {
-			// 					ifNotFound: function () {
-			// 						throw Error("prepareJointsWithProofs unit not found " + row.unit);
-			// 					},
-			// 					ifFound: function (objJoint) {
-			// 						objResponse.joints.push(objJoint);
-			// 						if (row.main_chain_index > last_ball_mci || row.main_chain_index === null) // unconfirmed, no proofchain
-			// 							return cb2();
-			// 						buildProofChain(later_mci, row.main_chain_index, row.unit, objResponse.proofchain_balls, function () {
-			// 							later_mci = row.main_chain_index;
-			// 							cb2();
-			// 						});
-			// 					}
-			// 				});
-			// 			},
-			// 			function () {
-			// 				//if (objResponse.joints.length > 0 && objResponse.proofchain_balls.length === 0)
-			// 				//    throw "no proofs";
-			// 				if (objResponse.proofchain_balls.length === 0)
-			// 					delete objResponse.proofchain_balls;
-			// 				callbacks.ifOk(objResponse);
-			// 				console.log("prepareHistory for addresses " + (arrAddresses || []).join(', ') + " and joints " + (arrRequestedJoints || []).join(', ') + " took " + (Date.now() - start_ts) + 'ms');
-			// 				unlock();
-			// 			}
-			// 		);
-			// 	}
-			// );
+			witnessProof.prepareWitnessProof(
+				arrWitnesses, 0,
+				function (err, arrUnstableMcJoints, arrWitnessChangeAndDefinitionJoints, last_ball_unit, last_ball_mci) {
+					if (err) {
+						callbacks.ifError(err);
+						return unlock();
+					}
+					objResponse.unstable_mc_joints = arrUnstableMcJoints;
+					if (arrWitnessChangeAndDefinitionJoints.length > 0)
+						objResponse.witness_change_and_definition_joints = arrWitnessChangeAndDefinitionJoints;
+
+					// add my joints and proofchain to those joints
+					objResponse.joints = [];
+					objResponse.proofchain_balls = [];
+					var later_mci = last_ball_mci + 1; // +1 so that last ball itself is included in the chain
+					async.eachSeries(
+						rows,
+						function (row, cb2) {
+							storage.readJoint(db, row.unit, {
+								ifNotFound: function () {
+									throw Error("prepareJointsWithProofs unit not found " + row.unit);
+								},
+								ifFound: function (objJoint) {
+									objResponse.joints.push(objJoint);
+									if (row.main_chain_index > last_ball_mci || row.main_chain_index === null) // unconfirmed, no proofchain
+										return cb2();
+									buildProofChain(later_mci, row.main_chain_index, row.unit, objResponse.proofchain_balls, function () {
+										later_mci = row.main_chain_index;
+										cb2();
+									});
+								}
+							});
+						},
+						function () {
+							//if (objResponse.joints.length > 0 && objResponse.proofchain_balls.length === 0)
+							//    throw "no proofs";
+							if (objResponse.proofchain_balls.length === 0)
+								delete objResponse.proofchain_balls;
+							callbacks.ifOk(objResponse);
+							console.log("prepareHistory for addresses " + (arrAddresses || []).join(', ') + " and joints " + (arrRequestedJoints || []).join(', ') + " took " + (Date.now() - start_ts) + 'ms');
+							unlock();
+						}
+					);
+				}
+			);
 		});
 	});
 }
@@ -282,117 +282,117 @@ function processHistory(objResponse, callbacks) {
 	if (!objResponse.proofchain_balls)
 		objResponse.proofchain_balls = [];
 
-	// witnessProof.processWitnessProof(
-	// 	objResponse.unstable_mc_joints, objResponse.witness_change_and_definition_joints, false,
-	// 	function (err, arrLastBallUnits, assocLastBallByLastBallUnit) {
-    //
-	// 		if (err)
-	// 			return callbacks.ifError(err);
-    //
-	// 		var assocKnownBalls = {};
-	// 		for (var unit in assocLastBallByLastBallUnit) {
-	// 			var ball = assocLastBallByLastBallUnit[unit];
-	// 			assocKnownBalls[ball] = true;
-	// 		}
-    //
-	// 		// proofchain
-	// 		var assocProvenUnitsNonserialness = {};
-	// 		for (var i = 0; i < objResponse.proofchain_balls.length; i++) {
-	// 			var objBall = objResponse.proofchain_balls[i];
-	// 			if (objBall.ball !== objectHash.getBallHash(objBall.unit, objBall.parent_balls, objBall.skiplist_balls, objBall.is_nonserial))
-	// 				return callbacks.ifError("wrong ball hash: unit " + objBall.unit + ", ball " + objBall.ball);
-	// 			if (!assocKnownBalls[objBall.ball])
-	// 				return callbacks.ifError("ball not known: " + objBall.ball);
-	// 			objBall.parent_balls.forEach(function (parent_ball) {
-	// 				assocKnownBalls[parent_ball] = true;
-	// 			});
-	// 			if (objBall.skiplist_balls)
-	// 				objBall.skiplist_balls.forEach(function (skiplist_ball) {
-	// 					assocKnownBalls[skiplist_ball] = true;
-	// 				});
-	// 			assocProvenUnitsNonserialness[objBall.unit] = objBall.is_nonserial;
-	// 		}
-	// 		assocKnownBalls = null; // free memory
-    //
-	// 		// joints that pay to/from me and joints that I explicitly requested
-	// 		for (var i = 0; i < objResponse.joints.length; i++) {
-	// 			var objJoint = objResponse.joints[i];
-	// 			var objUnit = objJoint.unit;
-	// 			//if (!objJoint.ball)
-	// 			//    return callbacks.ifError("stable but no ball");
-	// 			if (!validation.hasValidHashes(objJoint))
-	// 				return callbacks.ifError("invalid hash");
-	// 			if (!ValidationUtils.isPositiveInteger(objUnit.timestamp))
-	// 				return callbacks.ifError("no timestamp");
-	// 			// we receive unconfirmed units too
-	// 			//if (!assocProvenUnitsNonserialness[objUnit.unit])
-	// 			//    return callbacks.ifError("proofchain doesn't prove unit "+objUnit.unit);
-	// 		}
-    //
-	// 		// save joints that pay to/from me and joints that I explicitly requested
-	// 		mutex.lock(["light_joints"], function (unlock) {
-	// 			var arrUnits = objResponse.joints.map(function (objJoint) { return objJoint.unit.unit; });
-	// 			breadcrumbs.add('got light_joints for processHistory ' + arrUnits.join(', '));
-	// 			db.query("SELECT unit, is_stable FROM units WHERE unit IN(" + arrUnits.map(db.escape).join(', ') + ")", function (rows) {
-	// 				var assocExistingUnits = {};
-	// 				rows.forEach(function (row) {
-	// 					assocExistingUnits[row.unit] = true;
-	// 				});
-	// 				var arrProvenUnits = [];
-	// 				async.eachSeries(
-	// 					objResponse.joints.reverse(), // have them in forward chronological order so that we correctly mark is_spent flag
-	// 					function (objJoint, cb2) {
-	// 						var objUnit = objJoint.unit;
-	// 						var unit = objUnit.unit;
-	// 						// assocProvenUnitsNonserialness[unit] is true for non-serials, false for serials, undefined for unstable
-	// 						var sequence = assocProvenUnitsNonserialness[unit] ? 'final-bad' : 'good';
-	// 						if (unit in assocProvenUnitsNonserialness)
-	// 							arrProvenUnits.push(unit);
-	// 						if (assocExistingUnits[unit]) {
-	// 							//if (!assocProvenUnitsNonserialness[objUnit.unit]) // not stable yet
-	// 							//    return cb2();
-	// 							// it can be null!
-	// 							//if (!ValidationUtils.isNonnegativeInteger(objUnit.main_chain_index))
-	// 							//    return cb2("bad main_chain_index in proven unit");
-	// 							db.query(
-	// 								"UPDATE units SET main_chain_index=?, sequence=? WHERE unit=?",
-	// 								[objUnit.main_chain_index, sequence, unit],
-	// 								function () {
-	// 									cb2();
-	// 								}
-	// 							);
-	// 						}
-	// 						else
-	// 							writer.saveJoint(objJoint, { sequence: sequence, arrDoubleSpendInputs: [], arrAdditionalQueries: [] }, null, cb2);
-	// 					},
-	// 					function (err) {
-	// 						breadcrumbs.add('processHistory almost done');
-	// 						if (err) {
-	// 							unlock();
-	// 							return callbacks.ifError(err);
-	// 						}
-	// 						fixIsSpentFlagAndInputAddress(function () {
-	// 							if (arrProvenUnits.length === 0) {
-	// 								unlock();
-	// 								return callbacks.ifOk(true);
-	// 							}
-	// 							db.query("UPDATE units SET is_stable=1, is_free=0 WHERE unit IN(?)", [arrProvenUnits], function () {
-	// 								unlock();
-	// 								arrProvenUnits = arrProvenUnits.filter(function (unit) { return !assocProvenUnitsNonserialness[unit]; });
-	// 								if (arrProvenUnits.length === 0)
-	// 									return callbacks.ifOk(true);
-	// 								emitStability(arrProvenUnits, function (bEmitted) {
-	// 									callbacks.ifOk(!bEmitted);
-	// 								});
-	// 							});
-	// 						});
-	// 					}
-	// 				);
-	// 			});
-	// 		});
-    //
-	// 	}
-	// );
+	witnessProof.processWitnessProof(
+		objResponse.unstable_mc_joints, objResponse.witness_change_and_definition_joints, false,
+		function (err, arrLastBallUnits, assocLastBallByLastBallUnit) {
+
+			if (err)
+				return callbacks.ifError(err);
+
+			var assocKnownBalls = {};
+			for (var unit in assocLastBallByLastBallUnit) {
+				var ball = assocLastBallByLastBallUnit[unit];
+				assocKnownBalls[ball] = true;
+			}
+
+			// proofchain
+			var assocProvenUnitsNonserialness = {};
+			for (var i = 0; i < objResponse.proofchain_balls.length; i++) {
+				var objBall = objResponse.proofchain_balls[i];
+				if (objBall.ball !== objectHash.getBallHash(objBall.unit, objBall.parent_balls, objBall.skiplist_balls, objBall.is_nonserial))
+					return callbacks.ifError("wrong ball hash: unit " + objBall.unit + ", ball " + objBall.ball);
+				if (!assocKnownBalls[objBall.ball])
+					return callbacks.ifError("ball not known: " + objBall.ball);
+				objBall.parent_balls.forEach(function (parent_ball) {
+					assocKnownBalls[parent_ball] = true;
+				});
+				if (objBall.skiplist_balls)
+					objBall.skiplist_balls.forEach(function (skiplist_ball) {
+						assocKnownBalls[skiplist_ball] = true;
+					});
+				assocProvenUnitsNonserialness[objBall.unit] = objBall.is_nonserial;
+			}
+			assocKnownBalls = null; // free memory
+
+			// joints that pay to/from me and joints that I explicitly requested
+			for (var i = 0; i < objResponse.joints.length; i++) {
+				var objJoint = objResponse.joints[i];
+				var objUnit = objJoint.unit;
+				//if (!objJoint.ball)
+				//    return callbacks.ifError("stable but no ball");
+				if (!validation.hasValidHashes(objJoint))
+					return callbacks.ifError("invalid hash");
+				if (!ValidationUtils.isPositiveInteger(objUnit.timestamp))
+					return callbacks.ifError("no timestamp");
+				// we receive unconfirmed units too
+				//if (!assocProvenUnitsNonserialness[objUnit.unit])
+				//    return callbacks.ifError("proofchain doesn't prove unit "+objUnit.unit);
+			}
+
+			// save joints that pay to/from me and joints that I explicitly requested
+			mutex.lock(["light_joints"], function (unlock) {
+				var arrUnits = objResponse.joints.map(function (objJoint) { return objJoint.unit.unit; });
+				breadcrumbs.add('got light_joints for processHistory ' + arrUnits.join(', '));
+				db.query("SELECT unit, is_stable FROM units WHERE unit IN(" + arrUnits.map(db.escape).join(', ') + ")", function (rows) {
+					var assocExistingUnits = {};
+					rows.forEach(function (row) {
+						assocExistingUnits[row.unit] = true;
+					});
+					var arrProvenUnits = [];
+					async.eachSeries(
+						objResponse.joints.reverse(), // have them in forward chronological order so that we correctly mark is_spent flag
+						function (objJoint, cb2) {
+							var objUnit = objJoint.unit;
+							var unit = objUnit.unit;
+							// assocProvenUnitsNonserialness[unit] is true for non-serials, false for serials, undefined for unstable
+							var sequence = assocProvenUnitsNonserialness[unit] ? 'final-bad' : 'good';
+							if (unit in assocProvenUnitsNonserialness)
+								arrProvenUnits.push(unit);
+							if (assocExistingUnits[unit]) {
+								//if (!assocProvenUnitsNonserialness[objUnit.unit]) // not stable yet
+								//    return cb2();
+								// it can be null!
+								//if (!ValidationUtils.isNonnegativeInteger(objUnit.main_chain_index))
+								//    return cb2("bad main_chain_index in proven unit");
+								db.query(
+									"UPDATE units SET main_chain_index=?, sequence=? WHERE unit=?",
+									[objUnit.main_chain_index, sequence, unit],
+									function () {
+										cb2();
+									}
+								);
+							}
+							else
+								writer.saveJoint(objJoint, { sequence: sequence, arrDoubleSpendInputs: [], arrAdditionalQueries: [] }, null, cb2);
+						},
+						function (err) {
+							breadcrumbs.add('processHistory almost done');
+							if (err) {
+								unlock();
+								return callbacks.ifError(err);
+							}
+							fixIsSpentFlagAndInputAddress(function () {
+								if (arrProvenUnits.length === 0) {
+									unlock();
+									return callbacks.ifOk(true);
+								}
+								db.query("UPDATE units SET is_stable=1, is_free=0 WHERE unit IN(?)", [arrProvenUnits], function () {
+									unlock();
+									arrProvenUnits = arrProvenUnits.filter(function (unit) { return !assocProvenUnitsNonserialness[unit]; });
+									if (arrProvenUnits.length === 0)
+										return callbacks.ifOk(true);
+									emitStability(arrProvenUnits, function (bEmitted) {
+										callbacks.ifOk(!bEmitted);
+									});
+								});
+							});
+						}
+					);
+				});
+			});
+
+		}
+	);
 
 }
 
