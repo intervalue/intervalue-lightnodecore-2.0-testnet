@@ -14,6 +14,7 @@ function readBalance(wallet, handleBalance) {
 	FROM outputs "+ join_my_addresses + " CROSS JOIN units USING(unit) \n\
 	WHERE is_spent=0 AND "+ where_condition + " AND sequence='good' \n\
 	GROUP BY asset, is_stable";
+
 	db.query(
 		sql,
 		[wallet],
@@ -24,6 +25,7 @@ function readBalance(wallet, handleBalance) {
 				if (!assocBalances[asset])
 					assocBalances[asset] = { stable: 0, pending: 0 };
 				assocBalances[asset][row.is_stable ? 'stable' : 'pending'] = row.balance;
+
 			}
 			var my_addresses_join = walletIsAddress ? "" : "my_addresses CROSS JOIN";
 			var using = walletIsAddress ? "" : "USING(address)";
