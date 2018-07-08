@@ -401,7 +401,7 @@ async function updateHistory(address) {
 	// let info = await hashnethelper.getInfo();
 	// console.log(JSON.stringify(info));
 	// return;
-	eventBus.emit('my_transactions_became_stable');
+	// eventBus.emit('my_transactions_became_stable');
 	let trans = [];
 	for (var addr of address) {
 		let result = await hashnethelper.getTransactionHistory(addr);
