@@ -401,6 +401,7 @@ async function updateHistory(address) {
 	// let info = await hashnethelper.getInfo();
 	// console.log(JSON.stringify(info));
 	// return;
+	eventBus.emit('my_transactions_became_stable');
 	let trans = [];
 	for (var addr of address) {
 		let result = await hashnethelper.getTransactionHistory(addr);
@@ -530,6 +531,10 @@ async function insertHistory(objUnit) {
 				from_main_chain_index, to_main_chain_index,
 				denomination, input.amount, input.serial_number,
 				payload.asset, is_unique, address);
+			db.addCmd(cmds,
+				"UPDATE outputs SET is_spent=1 WHERE unit=? AND message_index=? AND output_index=?",
+				src_unit, src_message_index, src_output_index
+			);
 		}
 		for (var j = 0; j < payload.outputs.length; j++) {
 			var output = payload.outputs[j];
