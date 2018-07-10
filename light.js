@@ -535,7 +535,7 @@ async function insertHistory(objUnit) {
 			if (deviceInfo.address.indexOf(address) >= 0) {
 				let uobj = await db.single('select * from outputs WHERE unit=? AND message_index=? AND output_index=?', src_unit, src_message_index, src_output_index);
 				if (uobj == null) {
-					return "the source unit is not in db now!"
+					return "the source unit is not in db now!";
 				}
 				db.addCmd(cmds,
 					"UPDATE outputs SET is_spent=1 WHERE unit=? AND message_index=? AND output_index=?",
