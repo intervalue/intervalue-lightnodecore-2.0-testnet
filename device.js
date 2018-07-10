@@ -110,7 +110,7 @@ function setDeviceName(device_name) {
 
 var pubKey = '';
 var walletId = '';
-var address = [];
+var addresses = [];
 async function getInfo() {
 	if (!pubKey || !walletId) {
 		let device_address = getMyDeviceAddress();
@@ -119,10 +119,10 @@ async function getInfo() {
 
 			pubKey = pubKey || JSON.parse(re.definition)[1].pubkey;
 			walletId = walletId || re.wallet;
-			address.push(re.address);
+			addresses.push(re.address);
 		}
 	}
-	return { walletId, pubKey, address };
+	return { walletId, pubKey, addresses };
 }
 
 function setDeviceHub(device_hub) {

@@ -397,14 +397,14 @@ function processHistory(objResponse, callbacks) {
 }
 
 
-async function updateHistory(address) {
+async function updateHistory(addresses) {
 	// let info = await hashnethelper.getInfo();
 	// console.log(JSON.stringify(info));
 	// return;
 	// eventBus.emit('my_transactions_became_stable');
 	let trans = [];
-	for (var addr of address) {
-		let result = await hashnethelper.getTransactionHistory(addr);
+	for (var address of addresses) {
+		let result = await hashnethelper.getTransactionHistory(address);
 		if (result.length > 0) {
 			trans = trans.concat(result);
 		}
@@ -531,8 +531,8 @@ async function insertHistory(objUnit) {
 				from_main_chain_index, to_main_chain_index,
 				denomination, input.amount, input.serial_number,
 				payload.asset, is_unique, address);
-			let deviceInfo = await device.getInfo();
-			if (deviceInfo.address.indexOf(address) >= 0) {
+			let { addresses } = await device.getInfo();
+			if (addresses.indexOf(address) >= 0) {
 				let uobj = await db.single('select * from outputs WHERE unit=? AND message_index=? AND output_index=?', src_unit, src_message_index, src_output_index);
 				if (uobj == null) {
 					return "the source unit is not in db now!";

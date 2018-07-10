@@ -1922,8 +1922,8 @@ async function requestTransactionHistory() {
 	// 		content_hash: null, main_chain_index: '872', timestamp: '1529552802', authors, messages
 	// 	}]
 	// };
-	let { address } = await device.getInfo();
-	await light.updateHistory(address);
+	let { addresses } = await device.getInfo();
+	await light.updateHistory(addresses);
 }
 
 function initialLocalfullnodeList() {
