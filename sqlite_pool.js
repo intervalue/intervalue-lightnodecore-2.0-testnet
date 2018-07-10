@@ -503,7 +503,7 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 		}
 	}
 
-	async function SingleList(sql, ...args) {
+	async function singleList(sql, ...args) {
 		//console.log(arguments[0]);
 		var connection = await takeConnectionFromPoolSync();
 
@@ -595,7 +595,7 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 	pool.first = first;
 	pool.single = single;
 	pool.execute = execute;
-	pool.SingleList = SingleList;
+	pool.singleList = singleList;
 	pool.executeTrans = executeTrans;
 	pool.executeBatch = executeBatch;
 	pool.addQuery = addQuery;
