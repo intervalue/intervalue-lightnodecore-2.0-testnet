@@ -434,7 +434,7 @@ async function updateHistory(addresses) {
 					let unit = await hashnethelper.getUnitInfo(unitId);
 					if (unit) {
 						let i_result = await insertHistory(unit.unit);
-						if (!i_result) {
+						if (!i_result && !i_bool) {
 							i_bool = true;
 						}
 					}
