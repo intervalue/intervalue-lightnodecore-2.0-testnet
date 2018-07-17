@@ -26,8 +26,9 @@ module.exports = function (db_name, MAX_CONNECTIONS, bReadOnly) {
 		return new Promise(function (resolve, reject) {
 			if (bCordova) {
 				var db = new cordovaSqlite(db_name);
-				db.open();
-				resolve(db);
+				db.open(function () {
+					resolve(db);
+				});
 			}
 			else {
 				resolve(new sqlite3.Database(path + db_name, bReadOnly ? sqlite3.OPEN_READONLY : sqlite3.OPEN_READWRITE));
