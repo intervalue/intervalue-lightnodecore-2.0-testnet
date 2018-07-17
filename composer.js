@@ -137,6 +137,13 @@ function pickDivisibleCoinsForAmountForJoint(conn, objAsset, arrAddresses, amoun
 						addInput(input);
 						// if we allow equality, we might get 0 amount for change which is invalid
 						var bFound = is_base ? (total_amount > required_amount) : (total_amount >= required_amount);
+						if (bFound) {
+							onDone(arrInputsWithProofs, total_amount);
+						}
+						else {
+							issueAsset();
+						}
+						return;
 						bFound ? cb('found') : cb();
 					},
 					function (err) {
