@@ -40,24 +40,51 @@ class HashnetHelper {
     }
 
     static async sendMessage(unit) {
-        let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
-        console.log("sending unit:");
-        unit = JSON.stringify(unit);
-        console.log(unit);
-        let result = await webHelper.httpPost(getUrl(localfullnode, '/sendMessage/'), null, buildData({ unit }));
-        return result;
+        try {
+            let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
+            if (!localfullnode) {
+                throw new Error('network error, please try again.');
+            }
+            console.log("sending unit:");
+            unit = JSON.stringify(unit);
+            console.log(unit);
+            let result = await webHelper.httpPost(getUrl(localfullnode, '/sendMessage/'), null, buildData({ unit }));
+            return result;
+        }
+        catch (e) {
+            HashnetHelper.initialLocalfullnodeList();
+            return 'network error,please try again.';
+        }
     }
 
     static async getTransactionHistory(address) {
-        let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
-        let result = await webHelper.httpPost(getUrl(localfullnode, '/getTransactionHistory/'), null, buildData({ address }));
-        return result ? JSON.parse(result) : [];
+        try {
+            let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
+            if (!localfullnode) {
+                throw new Error('network error, please try again.');
+            }
+            let result = await webHelper.httpPost(getUrl(localfullnode, '/getTransactionHistory/'), null, buildData({ address }));
+            return result ? JSON.parse(result) : [];
+        }
+        catch (e) {
+            HashnetHelper.initialLocalfullnodeList();
+            return [];
+        }
     }
 
     static async getUnitInfo(unitId) {
-        let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
-        let result = await webHelper.httpPost(getUrl(localfullnode, '/getUnitInfo/'), null, buildData({ unitId }));
-        return result ? JSON.parse(result) : null;
+        try {
+            let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
+            if (!localfullnode) {
+                throw new Error('network error, please try again.');
+            }
+            let result = await webHelper.httpPost(getUrl(localfullnode, '/getUnitInfo/'), null, buildData({ unitId }));
+            return result ? JSON.parse(result) : null;
+        }
+        catch (e) {
+            HashnetHelper.initialLocalfullnodeList();
+            return null;
+        }
     }
 }
 
