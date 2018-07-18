@@ -872,6 +872,7 @@ ORDER BY ts DESC"+ (opts.limit ? " LIMIT ?" : "");
 					if (movement.sequence !== 'good') {
 						var transaction = {
 							action: 'invalid',
+							amount: movement.plus,
 							confirmations: movement.is_stable,
 							unit: unit,
 							fee: movement.fee,
