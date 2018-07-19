@@ -418,55 +418,57 @@ async function updateHistory(addresses) {
 		let bad_trans = [];
 		for (var tran of trans) {
 			let unit = await db.first("select * from units where unit = ?", tran.unitId);
-			if (unit && tran.isValid == 1) {
+			if (unit && tran.isValid == 1 && unit.is_stable != 1) {
 				update_trans.push(tran.unitId);
 			}
-			else if (unit && unit.sequence == 'good' && unit.isValid == 0) {
+			else if (unit && unit.sequence == 'good' && tran.isValid == 0) {
 				bad_trans.push(tran.unitId);
 			}
-			else if (!unit && unit.isValid == 1) {
+			else if (!unit && tran.isValid == 1) {
 				insert_trans.push(tran.unitId);
 			}
 		}
-		await mutex.lock(["write"], async function (unlock) {
-			if (update_trans.length > 0) {
-				await db.execute("update units set is_stable = 1 where unit in (?)", update_trans);
-			}
-			var i_bool = false;
-			if (bad_trans.length > 0) {
-				for (let i = 0; i < bad_trans.length; i++) {
-					let cmds = [];
-					let input = await db.first("select * from inputs where unit = ?", bad_trans[i]);
-					db.addCmd(cmds,
-						"UPDATE outputs SET is_spent=0 WHERE unit=? AND message_index=? AND output_index=?",
-						input.src_unit, input.src_message_index, input.src_output_index
-					);
-					db.addCmd(cmds,
-						"update units set is_stable = 1,sequence = 'final-bad' where unit = ?",
-						bad_trans[i]
-					);
-					let b_result = await db.executeTrans(cmds);
-					if (!b_result && !i_bool) {
-						i_bool = true;
-					}
+		if (update_trans.length > 0 || insert_trans.length > 0 || bad_trans.length > 0) {
+			await mutex.lock(["write"], async function (unlock) {
+				if (update_trans.length > 0) {
+					await db.execute("update units set is_stable = 1 where unit in (?)", update_trans);
 				}
-			}
-			if (insert_trans.length > 0) {
-				for (var unitId of insert_trans) {
-					let unit = await hashnethelper.getUnitInfo(unitId);
-					if (unit) {
-						let i_result = await insertHistory(unit.unit);
-						if (!i_result && !i_bool) {
+				var i_bool = false;
+				if (bad_trans.length > 0) {
+					for (let i = 0; i < bad_trans.length; i++) {
+						let cmds = [];
+						let input = await db.first("select * from inputs where unit = ?", bad_trans[i]);
+						db.addCmd(cmds,
+							"UPDATE outputs SET is_spent=0 WHERE unit=? AND message_index=? AND output_index=?",
+							input.src_unit, input.src_message_index, input.src_output_index
+						);
+						db.addCmd(cmds,
+							"update units set is_stable = 1,sequence = 'final-bad' where unit = ?",
+							bad_trans[i]
+						);
+						let b_result = await db.executeTrans(cmds);
+						if (!b_result && !i_bool) {
 							i_bool = true;
 						}
 					}
 				}
-			}
-			unlock();
-			if (update_trans.length > 0 || i_bool) {
-				eventBus.emit('my_transactions_became_stable');
-			}
-		});
+				if (insert_trans.length > 0) {
+					for (var unitId of insert_trans) {
+						let unit = await hashnethelper.getUnitInfo(unitId);
+						if (unit) {
+							let i_result = await insertHistory(unit.unit);
+							if (!i_result && !i_bool) {
+								i_bool = true;
+							}
+						}
+					}
+				}
+				unlock();
+				if (update_trans.length > 0 || i_bool) {
+					eventBus.emit('my_transactions_became_stable');
+				}
+			});
+		}
 	}
 }
 
