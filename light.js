@@ -402,6 +402,7 @@ async function updateHistory(addresses) {
 	// console.log(JSON.stringify(info));
 	// return;
 	// eventBus.emit('my_transactions_became_stable');
+	// eventBus.emit('refresh_light_started');
 	let trans = [];
 	for (var address of addresses) {
 		let result = await hashnethelper.getTransactionHistory(address);
@@ -430,6 +431,7 @@ async function updateHistory(addresses) {
 		}
 		if (update_trans.length > 0 || insert_trans.length > 0 || bad_trans.length > 0) {
 			await mutex.lock(["write"], async function (unlock) {
+				eventBus.emit('refresh_light_started');
 				if (update_trans.length > 0) {
 					await db.execute("update units set is_stable = 1 where unit in (?)", update_trans);
 				}
@@ -466,6 +468,7 @@ async function updateHistory(addresses) {
 				unlock();
 				if (update_trans.length > 0 || i_bool) {
 					eventBus.emit('my_transactions_became_stable');
+					eventBus.emit('refresh_light_done');
 				}
 			});
 		}
