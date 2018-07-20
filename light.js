@@ -440,17 +440,19 @@ async function updateHistory(addresses) {
 					for (let i = 0; i < bad_trans.length; i++) {
 						let cmds = [];
 						let input = await db.first("select * from inputs where unit = ?", bad_trans[i]);
-						db.addCmd(cmds,
-							"UPDATE outputs SET is_spent=0 WHERE unit=? AND message_index=? AND output_index=?",
-							input.src_unit, input.src_message_index, input.src_output_index
-						);
-						db.addCmd(cmds,
-							"update units set is_stable = 1,sequence = 'final-bad' where unit = ?",
-							bad_trans[i]
-						);
-						let b_result = await db.executeTrans(cmds);
-						if (!b_result && !i_bool) {
-							i_bool = true;
+						if (input) {
+							db.addCmd(cmds,
+								"UPDATE outputs SET is_spent=0 WHERE unit=? AND message_index=? AND output_index=?",
+								input.src_unit, input.src_message_index, input.src_output_index
+							);
+							db.addCmd(cmds,
+								"update units set is_stable = 1,sequence = 'final-bad' where unit = ?",
+								bad_trans[i]
+							);
+							let b_result = await db.executeTrans(cmds);
+							if (!b_result && !i_bool) {
+								i_bool = true;
+							}
 						}
 					}
 				}
