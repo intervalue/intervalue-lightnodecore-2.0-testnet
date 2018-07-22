@@ -14,7 +14,7 @@ class HashnetHelper {
         }
         if (localfullnodes.length > 0) {
             let localfullnode = localfullnodes[secrethelper.random(0, localfullnodes.length - 1)];
-            console.log("get localfullnode:" + localfullnode);
+            console.log("get localfullnode:" + JSON.stringify(localfullnode));
             return localfullnode;
         }
         else {
