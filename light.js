@@ -419,10 +419,10 @@ async function updateHistory(addresses) {
 		let bad_trans = [];
 		for (var tran of trans) {
 			let unit = await db.first("select * from units where unit = ?", tran.unitId);
-			if (unit && tran.isValid == 1 && unit.is_stable != 1) {
+			if (unit && tran.isStable == 1 && tran.isValid == 1 && unit.is_stable != 1) {
 				update_trans.push(tran.unitId);
 			}
-			else if (unit && unit.sequence == 'good' && tran.isValid == 0) {
+			else if (unit && tran.isStable == 1 && unit.sequence == 'good' && tran.isValid == 0) {
 				bad_trans.push(tran.unitId);
 			}
 			else if (!unit && tran.isValid == 1) {
