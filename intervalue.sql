@@ -283,9 +283,9 @@ CREATE TABLE inputs (
 	amount BIGINT NULL, -- issue
 	address CHAR(32) NOT NULL,
 	PRIMARY KEY (unit, message_index, input_index),
-	-- UNIQUE KEY bySrcOutput(src_unit, src_message_index, src_output_index, is_unique), -- UNIQUE guarantees there'll be no double spend for type=transfer
-	-- UNIQUE KEY byIndexAddress(type, from_main_chain_index, address, is_unique), -- UNIQUE guarantees there'll be no double spend for type=hc/witnessing
-	-- UNIQUE KEY byAssetDenominationSerialAddress(asset, denomination, serial_number, address, is_unique), -- UNIQUE guarantees there'll be no double issue
+	UNIQUE KEY bySrcOutput(src_unit, src_message_index, src_output_index, is_unique), -- UNIQUE guarantees there'll be no double spend for type=transfer
+	UNIQUE KEY byIndexAddress(type, from_main_chain_index, address, is_unique), -- UNIQUE guarantees there'll be no double spend for type=hc/witnessing
+	UNIQUE KEY byAssetDenominationSerialAddress(asset, denomination, serial_number, address, is_unique), -- UNIQUE guarantees there'll be no double issue
 	KEY byAssetType(asset, type),
 	KEY byAddressTypeToMci(address, type, to_main_chain_index),
 	FOREIGN KEY byUnit(unit) REFERENCES units(unit),

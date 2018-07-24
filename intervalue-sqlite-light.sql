@@ -280,9 +280,9 @@ CREATE TABLE inputs (
 	amount BIGINT NULL, -- issue
 	address CHAR(32)  NULL, -- in light we allow NULL because address is copied from previous output which might not be known to light client
 	PRIMARY KEY (unit, message_index, input_index),
-	-- UNIQUE  (src_unit, src_message_index, src_output_index, is_unique), -- UNIQUE guarantees there'll be no double spend for type=transfer
-	-- UNIQUE  (type, from_main_chain_index, address, is_unique), -- UNIQUE guarantees there'll be no double spend for type=hc/witnessing
-	-- UNIQUE  (asset, denomination, serial_number, address, is_unique), -- UNIQUE guarantees there'll be no double issue
+	UNIQUE  (src_unit, src_message_index, src_output_index, is_unique), -- UNIQUE guarantees there'll be no double spend for type=transfer
+	UNIQUE  (type, from_main_chain_index, address, is_unique), -- UNIQUE guarantees there'll be no double spend for type=hc/witnessing
+	UNIQUE  (asset, denomination, serial_number, address, is_unique), -- UNIQUE guarantees there'll be no double issue
 	FOREIGN KEY (unit) REFERENCES units(unit)
 );
 CREATE INDEX inputsIndexByAddress ON inputs(address);
