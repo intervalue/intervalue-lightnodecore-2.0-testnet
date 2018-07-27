@@ -1580,6 +1580,11 @@ function sendMultiPayment1(opts, handleResult) {
 }
 
 async function sendMultiPayment(opts, handleResult) {
+	let deviceInfo = await device.getInfo();
+	if (deviceInfo.addresses.indexOf(opts.change_address) >= 0) {
+		return handleResult("to_address and from_address is same"
+		);
+	}
 	var asset = opts.asset;
 	if (asset === 'base')
 		asset = null;
