@@ -57,7 +57,7 @@ function sortOutputs(a, b) {
 
 // bMultiAuthored includes all addresses, not just those that pay
 // arrAddresses is paying addresses
-function pickDivisibleCoinsForAmountForJoint(conn, objAsset, arrAddresses, amount, bMultiAuthored, onDone) {
+function pickDivisibleCoinsForAmountForJoint(conn, objAsset, arrAddresses, amount, bMultiAuthored, spendUnconfirmed, onDone) {
 	var asset = objAsset ? objAsset.asset : null;
 	console.log("pick coins " + asset + " amount " + amount);
 	var is_base = objAsset ? 0 : 1;
@@ -96,7 +96,12 @@ function pickDivisibleCoinsForAmountForJoint(conn, objAsset, arrAddresses, amoun
 		if (amount === Infinity)
 			return pickMultipleCoinsAndContinue();
 		var more = is_base ? '>' : '>=';
-		conn.query(
+		conn.query(spendUnconfirmed ? "SELECT unit, message_index, output_index, amount, blinding, address \n\
+			FROM outputs \n\
+			CROSS JOIN units USING(unit) \n\
+			WHERE address IN(?) AND asset"+ (asset ? "=" + conn.escape(asset) : " IS NULL") + " AND is_spent=0 AND amount " + more + " ? \n\
+				AND sequence='good'  \n\
+			ORDER BY amount LIMIT 1":
 			"SELECT unit, message_index, output_index, amount, blinding, address \n\
 			FROM outputs \n\
 			CROSS JOIN units USING(unit) \n\
@@ -119,7 +124,12 @@ function pickDivisibleCoinsForAmountForJoint(conn, objAsset, arrAddresses, amoun
 
 	// then, try to add smaller coins until we accumulate the target amount
 	function pickMultipleCoinsAndContinue() {
-		conn.query(
+		conn.query(spendUnconfirmed ? "SELECT unit, message_index, output_index, amount, address, blinding \n\
+			FROM outputs \n\
+			CROSS JOIN units USING(unit) \n\
+			WHERE address IN(?) AND asset"+ (asset ? "=" + conn.escape(asset) : " IS NULL") + " AND is_spent=0 \n\
+			 AND sequence='good'  \n\
+			ORDER BY amount DESC LIMIT ?":
 			"SELECT unit, message_index, output_index, amount, address, blinding \n\
 			FROM outputs \n\
 			CROSS JOIN units USING(unit) \n\
@@ -587,6 +597,7 @@ async function composeJointForJoint(params) {
 	var lightProps = params.lightProps;
 	var signer = params.signer;
 	var callbacks = params.callbacks;
+	var spendUnconfirmed = params.spendUnconfirmed;
 
 	// if (conf.bLight && !lightProps)
 	// 	throw Error("no parent props for light");
@@ -740,7 +751,7 @@ async function composeJointForJoint(params) {
 			// all inputs must appear before last_ball
 			var target_amount = params.send_all ? Infinity : (total_amount + objUnit.headers_commission + naked_payload_commission);
 			pickDivisibleCoinsForAmountForJoint(
-				conn, null, arrPayingAddresses, target_amount, bMultiAuthored,
+				conn, null, arrPayingAddresses, target_amount, bMultiAuthored, spendUnconfirmed,
 				function (arrInputsWithProofs, _total_input) {
 					if (!arrInputsWithProofs)
 						return cb({
@@ -1243,14 +1254,18 @@ function filterMostFundedAddresses(rows, estimated_amount) {
 	return arrFundedAddresses;
 }
 
-async function readSortedFundedAddressesForJoint(asset, arrAvailableAddresses, estimated_amount, handleFundedAddresses) {
+async function readSortedFundedAddressesForJoint(asset, arrAvailableAddresses, estimated_amount, spendUnconfirmed, handleFundedAddresses) {
 	if (arrAvailableAddresses.length === 0)
 		return await handleFundedAddresses([]);
 	if (estimated_amount && typeof estimated_amount !== 'number')
 		throw Error('invalid estimated amount: ' + estimated_amount);
 	// addresses closest to estimated amount come first
 	var order_by = estimated_amount ? "(SUM(amount)>" + estimated_amount + ") DESC, ABS(SUM(amount)-" + estimated_amount + ") ASC" : "SUM(amount) DESC";
-	await db.query(
+	await db.query(spendUnconfirmed ? "SELECT address, SUM(amount) AS total \n\
+		FROM outputs \n\
+		CROSS JOIN units USING(unit) \n\
+		WHERE address IN(?) AND sequence='good' AND is_spent=0 AND asset"+ (asset ? "=?" : " IS NULL")
+		+ " \n\ GROUP BY address ORDER BY " + order_by :
 		"SELECT address, SUM(amount) AS total \n\
 		FROM outputs \n\
 		CROSS JOIN units USING(unit) \n\
@@ -1321,7 +1336,7 @@ function readSortedFundedAddresses(asset, arrAvailableAddresses, estimated_amoun
 // note: it doesn't select addresses that have _only_ witnessing or headers commissions outputs
 async function composeMinimalJointForJoint(params) {
 	var estimated_amount = (params.send_all || params.retrieveMessages) ? 0 : params.outputs.reduce(function (acc, output) { return acc + output.amount; }, 0) + TYPICAL_FEE;
-	await readSortedFundedAddressesForJoint(null, params.available_paying_addresses, estimated_amount, async function (arrFundedPayingAddresses) {
+	await readSortedFundedAddressesForJoint(null, params.available_paying_addresses, estimated_amount, params.spendUnconfirmed, async function (arrFundedPayingAddresses) {
 		if (arrFundedPayingAddresses.length === 0)
 			return params.callbacks.ifNotEnoughFunds("all paying addresses are unfunded");
 		var minimal_params = _.clone(params);

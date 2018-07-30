@@ -1079,15 +1079,19 @@ function determineIfFixedDenominations(asset, handleResult) {
 	});
 }
 
-async function readFundedAddressesForJoint(asset, wallet, estimated_amount, handleFundedAddresses) {
+async function readFundedAddressesForJoint(asset, wallet, estimated_amount, spendUnconfirmed, handleFundedAddresses) {
 	var walletIsAddresses = ValidationUtils.isNonemptyArray(wallet);
 	if (walletIsAddresses)
-		return await composer.readSortedFundedAddressesForJoint(asset, wallet, estimated_amount, handleFundedAddresses);
+		return await composer.readSortedFundedAddressesForJoint(asset, wallet, estimated_amount, spendUnconfirmed, handleFundedAddresses);
 	if (estimated_amount && typeof estimated_amount !== 'number')
 		throw Error('invalid estimated amount: ' + estimated_amount);
 	// addresses closest to estimated amount come first
 	var order_by = estimated_amount ? "(SUM(amount)>" + estimated_amount + ") DESC, ABS(SUM(amount)-" + estimated_amount + ") ASC" : "SUM(amount) DESC";
-	db.query(
+	db.query(spendUnconfirmed ? "SELECT address, SUM(amount) AS total \n\
+		FROM outputs JOIN my_addresses USING(address) \n\
+		CROSS JOIN units USING(unit) \n\
+		WHERE wallet=? AND sequence='good' AND is_spent=0 AND "+ (asset ? "asset=?" : "asset IS NULL") +
+		" \n\ GROUP BY address ORDER BY " + order_by :
 		"SELECT address, SUM(amount) AS total \n\
 		FROM outputs JOIN my_addresses USING(address) \n\
 		CROSS JOIN units USING(unit) \n\
@@ -1237,8 +1241,8 @@ var TYPICAL_FEE = 1000;
 
 // fee_paying_wallet is used only if there are no bytes on the asset wallet, it is a sort of fallback wallet for fees
 async function readFundedAndSigningAddressesForJoint(
-	asset, wallet, estimated_amount, fee_paying_wallet, arrSigningAddresses, arrSigningDeviceAddresses, handleFundedAndSigningAddresses) {
-	await readFundedAddressesForJoint(asset, wallet, estimated_amount, async function (arrFundedAddresses) {
+	asset, wallet, estimated_amount, fee_paying_wallet, arrSigningAddresses, arrSigningDeviceAddresses, spendUnconfirmed, handleFundedAndSigningAddresses) {
+	await readFundedAddressesForJoint(asset, wallet, estimated_amount, spendUnconfirmed, async function (arrFundedAddresses) {
 		if (arrFundedAddresses.length === 0)
 			return await handleFundedAndSigningAddresses([], [], []);
 		var arrBaseFundedAddresses = [];
@@ -1250,7 +1254,7 @@ async function readFundedAndSigningAddressesForJoint(
 		};
 		if (!asset)
 			return await addSigningAddressesAndReturn();
-		await readFundedAddressesForJoint(null, wallet, TYPICAL_FEE, async function (_arrBaseFundedAddresses) {
+		await readFundedAddressesForJoint(null, wallet, TYPICAL_FEE, spendUnconfirmed, async function (_arrBaseFundedAddresses) {
 			// fees will be paid from the same addresses as the asset
 			if (_arrBaseFundedAddresses.length > 0 || !fee_paying_wallet || fee_paying_wallet === wallet) {
 				arrBaseFundedAddresses = _arrBaseFundedAddresses;
@@ -1600,7 +1604,7 @@ async function sendMultiPayment(opts, handleResult) {
 	var recipient_device_address = opts.recipient_device_address;
 	var signWithLocalPrivateKey = opts.signWithLocalPrivateKey;
 	var merkle_proof = opts.merkle_proof;
-
+	var spendUnconfirmed = opts.spendUnconfirmed;
 	var base_outputs = opts.base_outputs;
 	var asset_outputs = opts.asset_outputs;
 	var messages = opts.messages;
@@ -1630,7 +1634,7 @@ async function sendMultiPayment(opts, handleResult) {
 		estimated_amount += TYPICAL_FEE;
 
 	await readFundedAndSigningAddressesForJoint(
-		asset, wallet || arrPayingAddresses, estimated_amount, fee_paying_wallet, arrSigningAddresses, arrSigningDeviceAddresses,
+		asset, wallet || arrPayingAddresses, estimated_amount, fee_paying_wallet, arrSigningAddresses, arrSigningDeviceAddresses, spendUnconfirmed,
 		async function (arrFundedAddresses, arrBaseFundedAddresses, arrAllSigningAddresses) {
 
 			if (arrFundedAddresses.length === 0)
@@ -1748,6 +1752,7 @@ async function sendMultiPayment(opts, handleResult) {
 				signing_addresses: arrAllSigningAddresses,
 				messages: messages,
 				signer: signer,
+				spendUnconfirmed: spendUnconfirmed,
 				callbacks: {
 					ifNotEnoughFunds: function (err) {
 						handleResult(err);
