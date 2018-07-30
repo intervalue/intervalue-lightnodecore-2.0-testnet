@@ -176,7 +176,7 @@ function addWallet(wallet, xPubKey, account, arrWalletDefinitionTemplate, onDone
 				fields += ", full_approval_date, ready_date";
 				values += ", " + db.getNow() + ", " + db.getNow();
 			}
-			db.query("INSERT INTO wallets (" + fields + ") VALUES (" + values + ")", [wallet, account, JSON.stringify(arrWalletDefinitionTemplate)], function () {
+			db.query("replace INTO wallets (" + fields + ") VALUES (" + values + ")", [wallet, account, JSON.stringify(arrWalletDefinitionTemplate)], function () {
 				cb();
 			});
 		},
@@ -198,7 +198,7 @@ function addWallet(wallet, xPubKey, account, arrWalletDefinitionTemplate, onDone
 							values += ", " + db.getNow();
 						}
 					}
-					db.query("INSERT " + db.getIgnore() + " INTO extended_pubkeys (" + fields + ") VALUES (" + values + ")", arrParams, function () {
+					db.query("replace " + db.getIgnore() + " INTO extended_pubkeys (" + fields + ") VALUES (" + values + ")", arrParams, function () {
 						cb2();
 					});
 				},
@@ -213,7 +213,7 @@ function addWallet(wallet, xPubKey, account, arrWalletDefinitionTemplate, onDone
 					console.log("adding signing path " + signing_path + ' to wallet ' + wallet);
 					var device_address = assocDeviceAddressesBySigningPaths[signing_path];
 					db.query(
-						"INSERT INTO wallet_signing_paths (wallet, signing_path, device_address) VALUES (?,?,?)",
+						"replace INTO wallet_signing_paths (wallet, signing_path, device_address) VALUES (?,?,?)",
 						[wallet, signing_path, device_address],
 						function () {
 							cb2();
