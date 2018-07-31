@@ -566,7 +566,7 @@ async function insertHistory(objUnit) {
 				payload.asset, is_unique, address);
 			let { addresses } = await device.getInfo();
 			if (addresses.indexOf(address) >= 0) {
-				let uobj = await db.single('select * from outputs WHERE is_spend=1 and unit=? AND message_index=? AND output_index=?', src_unit, src_message_index, src_output_index);
+				let uobj = await db.single('select * from outputs WHERE is_spend=0 and unit=? AND message_index=? AND output_index=?', src_unit, src_message_index, src_output_index);
 				if (uobj == null) {
 					return "the source unit has spent or is not in db now!";
 				}
