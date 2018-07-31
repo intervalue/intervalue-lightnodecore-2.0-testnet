@@ -39,17 +39,26 @@ async function exec(arrKeys, proc, next_proc) {
 	arrLockedKeyArrays.push(arrKeys);
 	console.log("lock acquired", arrKeys);
 	var bLocked = true;
-	await proc(async function () {
-		if (!bLocked)
-			throw Error("double unlock?");
-		bLocked = false;
-		release(arrKeys);
-		console.log("lock released", arrKeys);
-		if (next_proc) {
-			await next_proc.apply(next_proc, arguments);
-		}
-		await handleQueue();
-	});
+	try {
+		await proc(async function () {
+			await unlock(bLocked, arrKeys, next_proc);
+		});
+	}
+	catch (e) {
+		await await unlock(bLocked, arrKeys, next_proc);
+	}
+}
+
+async function unlock(bLocked, arrKeys, next_proc) {
+	if (!bLocked)
+		throw Error("double unlock?");
+	bLocked = false;
+	release(arrKeys);
+	console.log("lock released", arrKeys);
+	if (next_proc) {
+		await next_proc.apply(next_proc, arguments);
+	}
+	await handleQueue();
 }
 
 async function handleQueue() {
