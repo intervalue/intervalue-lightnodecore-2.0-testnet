@@ -2,7 +2,7 @@
 
 let sa = require("superagent");
 // let request = require("request");
-let timeout = 2 * 1000;
+let timeout = 5 * 1000;
 class WebHelper {
     static httpGet(url, headers) {
         return new Promise(function (resolve, reject) {
