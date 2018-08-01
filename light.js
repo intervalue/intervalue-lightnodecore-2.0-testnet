@@ -408,31 +408,37 @@ async function updateHistory(addresses) {
 	}
 	u_finished = false;
 	let trans = [];
-	for (var address of addresses) {
-		let result = await hashnethelper.getTransactionHistory(address);
-		if (result.length > 0) {
-			trans = trans.concat(result);
+	try {
+		for (var address of addresses) {
+			let result = await hashnethelper.getTransactionHistory(address);
+			if (result.length > 0) {
+				trans = trans.concat(result);
+			}
 		}
-	}
-	if (trans.length === 0) {
-		return;
-	}
-	else {
+		if (trans.length === 0) {
+			return;
+		}
+		else {
 
-		for (var tran of trans) {
-			let unit = await db.first("select * from units where unit = ?", tran.unitId);
-			if (unit && tran.isStable == 1 && tran.isValid == 1 && unit.is_stable != 1) {
-				await updateTran(tran.unitId);
-			}
-			else if (unit && tran.isStable == 1 && unit.sequence == 'good' && tran.isValid == 0) {
-				await badTran(tran.unitId);
-			}
-			else if (!unit && tran.isValid == 1) {
-				await insertTran(tran.unitId);
+			for (var tran of trans) {
+				let unit = await db.first("select * from units where unit = ?", tran.unitId);
+				if (unit && tran.isStable == 1 && tran.isValid == 1 && unit.is_stable != 1) {
+					await updateTran(tran.unitId);
+				}
+				else if (unit && tran.isStable == 1 && unit.sequence == 'good' && tran.isValid == 0) {
+					await badTran(tran.unitId);
+				}
+				else if (!unit && tran.isValid == 1) {
+					await insertTran(tran.unitId);
+				}
 			}
 		}
 	}
-	u_finished = true;
+	catch (e) {
+		console.log(e);
+	}
+	finally { u_finished = true; }
+
 }
 
 async function updateTran(unitId) {
