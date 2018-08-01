@@ -61,6 +61,14 @@ async function unlock(bLocked, arrKeys, next_proc) {
 	await handleQueue();
 }
 
+function sleep(ms) {
+	return new Promise(function (resolve, reject) {
+		setTimeout(function () {
+			resolve();
+		}, ms);
+	})
+}
+
 async function handleQueue() {
 	console.log("handleQueue " + arrQueuedJobs.length + " items");
 	for (var i = 0; i < arrQueuedJobs.length; i++) {
@@ -117,6 +125,7 @@ exports.lock = lock;
 exports.lockOrSkip = lockOrSkip;
 exports.getCountOfQueuedJobs = getCountOfQueuedJobs;
 exports.getCountOfLocks = getCountOfLocks;
+exports.sleep = sleep;
 
 /*
 function test(key){

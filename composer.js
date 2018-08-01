@@ -1377,6 +1377,7 @@ async function composeAndSaveMinimalJointForJoint(params) {
 			console.log(e);
 		}
 		finally {
+			await mutex.sleep(2 * 1000);
 			await unlock();
 		}
 	});
