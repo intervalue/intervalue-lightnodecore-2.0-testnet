@@ -45,7 +45,7 @@ async function exec(arrKeys, proc, next_proc) {
 		});
 	}
 	catch (e) {
-		await await unlock(bLocked, arrKeys, next_proc);
+		await unlock(bLocked, arrKeys, next_proc);
 	}
 }
 

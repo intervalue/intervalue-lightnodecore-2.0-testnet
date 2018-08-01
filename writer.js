@@ -466,7 +466,7 @@ function saveJoint(objJoint, objValidationState, preCommitCallback, onDone) {
 		};
 
 		// without this locking, we get frequent deadlocks from mysql
-		mutex.lock(["write"], function (unlock) {
+		mutex.lock(["write-joint"], function (unlock) {
 			console.log("got lock to write " + objUnit.unit);
 			storage.assocUnstableUnits[objUnit.unit] = objNewUnitProps;
 			addInlinePaymentQueries(function () {

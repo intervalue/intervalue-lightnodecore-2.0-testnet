@@ -1371,7 +1371,15 @@ function composeAndSaveMinimalJoint(params) {
 async function composeAndSaveMinimalJointForJoint(params) {
 	var params_with_save = _.clone(params);
 	params_with_save.callbacks = getSavingCallbacksForJoint(params.callbacks);
-	await composeMinimalJointForJoint(params_with_save);
+	await mutex.lock(["write"], async function (unlock) {
+		try { await composeMinimalJointForJoint(params_with_save); }
+		catch (e) {
+			console.log(e);
+		}
+		finally {
+			await unlock();
+		}
+	});
 }
 
 function getSavingCallbacksForJoint(callbacks) {
