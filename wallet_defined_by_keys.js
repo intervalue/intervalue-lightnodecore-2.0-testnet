@@ -641,7 +641,6 @@ function issueNextAddress(wallet, is_change, handleAddress) {
 
 // selects one of recent addresses if the gap is too large, otherwise issues a new address
 function issueOrSelectNextAddress(wallet, is_change, handleAddress) {
-	console.log('来了。。。。。。。。。。。。。。。。。。。。。。。' + is_change);
 	readNextAddressIndex(wallet, is_change, function (next_index) {
 		if (next_index < MAX_BIP44_GAP)
 			return issueAddress(wallet, is_change, next_index, handleAddress);
