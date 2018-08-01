@@ -422,10 +422,10 @@ async function updateHistory(addresses) {
 		for (var tran of trans) {
 			let unit = await db.first("select * from units where unit = ?", tran.unitId);
 			if (unit && tran.isStable == 1 && tran.isValid == 1 && unit.is_stable != 1) {
-				await updateTran(unitId);
+				await updateTran(tran.unitId);
 			}
 			else if (unit && tran.isStable == 1 && unit.sequence == 'good' && tran.isValid == 0) {
-				await badTran(unitId);
+				await badTran(tran.unitId);
 			}
 			else if (!unit && tran.isValid == 1) {
 				await insertTran(tran.unitId);
