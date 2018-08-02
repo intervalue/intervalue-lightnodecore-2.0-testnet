@@ -77,18 +77,20 @@ class HashnetHelper {
     }
 
     static async reloadLocalfullnode(localfullnode) {
-        _.pull(localfullnodes, localfullnode);
-        await mutex.lock(["write"], async function (unlock) {
-            try {
-                await db.execute("delete from my_witnesses where address = ?", localfullnode.ip + ':' + localfullnode.httpPort);
-            }
-            catch (e) {
-                console.log(e);
-            }
-            finally {
-                await unlock();
-            }
-        });
+        if (localfullnode) {
+            _.pull(localfullnodes, localfullnode);
+            await mutex.lock(["write"], async function (unlock) {
+                try {
+                    await db.execute("delete from my_witnesses where address = ?", localfullnode.ip + ':' + localfullnode.httpPort);
+                }
+                catch (e) {
+                    console.log(e);
+                }
+                finally {
+                    await unlock();
+                }
+            });
+        }
         if (localfullnodes.length < 5) {
             let { pubKey } = await device.getInfo();
             localfullnodes = await HashnetHelper.getLocalfullnodeList(pubKey);
@@ -96,42 +98,55 @@ class HashnetHelper {
     }
 
     static async sendMessage(unit, retry) {
-
-        retry = retry ? retry - 1 : 3;
-        let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
-        if (!localfullnode) {
-            throw new Error('network error, please try again.');
+        let result = '';
+        retry = retry || 3;
+        if (retry > 1) {
+            for (var i = 0; i < retry; i++) {
+                result = await HashnetHelper.sendMessageTry(unit);
+                if (!result) {
+                    break;
+                }
+            }
+            return result;
         }
-        console.log("sending unit:");
-        unit = JSON.stringify(unit);
-        console.log(unit);
+        return await HashnetHelper.sendMessageTry(unit);
+    }
+
+    static async sendMessageTry(unit) {
+        let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
         try {
+            if (!localfullnode) {
+                throw new Error('network error, please try again.');
+            }
+            console.log("sending unit:");
+            unit = JSON.stringify(unit);
+            console.log(unit);
+
             let result = await webHelper.httpPost(getUrl(localfullnode, '/sendMessage/'), null, buildData({ unit }));
             return result;
         }
         catch (e) {
-            await HashnetHelper.reloadLocalfullnode(localfullnode);
-            if (retry) {
-                HashnetHelper.sendMessage(unit, retry);
+            if (localfullnode) {
+                await HashnetHelper.reloadLocalfullnode(localfullnode);
             }
-            else {
-                return 'network error,please try again.';
-            }
+            return 'network error,please try again.';
         }
     }
 
     static async getTransactionHistory(address) {
 
         let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
-        if (!localfullnode) {
-            throw new Error('network error, please try again.');
-        }
         try {
+            if (!localfullnode) {
+                throw new Error('network error, please try again.');
+            }
             let result = await webHelper.httpPost(getUrl(localfullnode, '/getTransactionHistory/'), null, buildData({ address }));
             return result ? JSON.parse(result) : [];
         }
         catch (e) {
-            await HashnetHelper.reloadLocalfullnode(localfullnode);
+            if (localfullnode) {
+                await HashnetHelper.reloadLocalfullnode(localfullnode);
+            }
             return null;
         }
     }
@@ -139,15 +154,17 @@ class HashnetHelper {
     static async getUnitInfo(unitId) {
 
         let localfullnode = await HashnetHelper.buildSingleLocalfullnode();
-        if (!localfullnode) {
-            throw new Error('network error, please try again.');
-        }
         try {
+            if (!localfullnode) {
+                throw new Error('network error, please try again.');
+            }
             let result = await webHelper.httpPost(getUrl(localfullnode, '/getUnitInfo/'), null, buildData({ unitId }));
             return result ? JSON.parse(result) : null;
         }
         catch (e) {
-            await HashnetHelper.reloadLocalfullnode(localfullnode);
+            if (localfullnode) {
+                await HashnetHelper.reloadLocalfullnode(localfullnode);
+            }
             return null;
         }
     }
