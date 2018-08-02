@@ -407,16 +407,24 @@ async function updateHistory(addresses) {
 		return;
 	}
 	u_finished = false;
-	let trans = [];
+	let trans = null;
 	try {
 		for (var address of addresses) {
 			let result = await hashnethelper.getTransactionHistory(address);
-			if (result.length > 0) {
-				trans = trans.concat(result);
+			if (result != null) {
+				if (trans == null) {
+					trans = [];
+				}
+				if (result.length > 0) {
+					trans = trans.concat(result);
+				}
 			}
 		}
-		if (trans.length === 0) {
+		if (trans == null) {
 			return;
+		}
+		if (trans.length === 0) {
+			await truncateTran();
 		}
 		else {
 
@@ -439,6 +447,34 @@ async function updateHistory(addresses) {
 	}
 	finally { u_finished = true; }
 
+}
+
+async function truncateTran() {
+	await mutex.lock(["write"], async function (unlock) {
+		try {
+			let count = await db.single("select count(*) from units");
+			if (count > 0) {
+				let cmds = [];
+				db.addCmd(cmds, "delete from inputs");
+				db.addCmd(cmds, "delete from outputs");
+				db.addCmd(cmds, "delete from unit_authors");
+				db.addCmd(cmds, "delete from authentifiers");
+				db.addCmd(cmds, "delete from messages");
+				db.addCmd(cmds, "delete from units");
+				let b_result = await db.executeTrans(cmds);
+				if (!b_result) {
+					tran_bool = true;
+				}
+			}
+
+		}
+		catch (e) {
+			console.log(e);
+		}
+		finally {
+			await unlock();
+		}
+	});
 }
 
 async function updateTran(unitId) {
