@@ -450,31 +450,30 @@ async function updateHistory(addresses) {
 }
 
 async function truncateTran() {
-	await mutex.lock(["write"], async function (unlock) {
-		try {
-			let count = await db.single("select count(*) from units");
-			if (count > 0) {
-				let cmds = [];
-				db.addCmd(cmds, "delete from inputs");
-				db.addCmd(cmds, "delete from outputs");
-				db.addCmd(cmds, "delete from unit_authors");
-				db.addCmd(cmds, "delete from authentifiers");
-				db.addCmd(cmds, "delete from messages");
-				db.addCmd(cmds, "delete from units");
+	let count = await db.single("select count(*) from units");
+	let cmds = [];
+	if (count > 0) {
+		db.addCmd(cmds, "delete from inputs");
+		db.addCmd(cmds, "delete from outputs");
+		db.addCmd(cmds, "delete from unit_authors");
+		db.addCmd(cmds, "delete from authentifiers");
+		db.addCmd(cmds, "delete from messages");
+		db.addCmd(cmds, "delete from units");
+		await mutex.lock(["write"], async function (unlock) {
+			try {
 				let b_result = await db.executeTrans(cmds);
 				if (!b_result) {
 					tran_bool = true;
 				}
 			}
-
-		}
-		catch (e) {
-			console.log(e);
-		}
-		finally {
-			await unlock();
-		}
-	});
+			catch (e) {
+				console.log(e);
+			}
+			finally {
+				await unlock();
+			}
+		});
+	}
 }
 
 async function updateTran(unitId) {
@@ -492,45 +491,25 @@ async function updateTran(unitId) {
 	});
 }
 
-async function insertTran(unitId) {
-	await mutex.lock(["write"], async function (unlock) {
-		try {
-			let unit = await hashnethelper.getUnitInfo(unitId);
-			if (unit) {
-				let i_result = await insertHistory(unit.unit);
-				if (!i_result) {
-					tran_bool = true;
-				}
-			}
-		}
-		catch (e) {
-			console.log(e);
-		}
-		finally {
-			await unlock();
-		}
-	});
-}
-
 async function badTran(unitId) {
+	let cmds = [];
+	let input = await db.first("select * from inputs where unit = ?", unitId);
+	if (input) {
+		db.addCmd(cmds,
+			"UPDATE outputs SET is_spent=0 WHERE unit=? AND message_index=? AND output_index=?",
+			input.src_unit, input.src_message_index, input.src_output_index
+		);
+	}
+	db.addCmd(cmds,
+		"update units set is_stable = 1,sequence = 'final-bad' where unit = ?",
+		unitId
+	);
+	db.addCmd(cmds,
+		"update inputs set is_unique=NULL where unit = ?",
+		unitId
+	);
 	await mutex.lock(["write"], async function (unlock) {
 		try {
-			let cmds = [];
-			let input = await db.first("select * from inputs where unit = ?", unitId);
-			if (input) {
-				db.addCmd(cmds,
-					"UPDATE outputs SET is_spent=0 WHERE unit=? AND message_index=? AND output_index=?",
-					input.src_unit, input.src_message_index, input.src_output_index
-				);
-			}
-			db.addCmd(cmds,
-				"update units set is_stable = 1,sequence = 'final-bad' where unit = ?",
-				unitId
-			);
-			db.addCmd(cmds,
-				"update inputs set is_unique=NULL where unit = ?",
-				unitId
-			);
 			let b_result = await db.executeTrans(cmds);
 			if (!b_result) {
 				tran_bool = true;
@@ -545,7 +524,9 @@ async function badTran(unitId) {
 	});
 }
 
-async function insertHistory(objUnit) {
+async function insertTran(unitId) {
+	let unit = await hashnethelper.getUnitInfo(unitId);
+	let objUnit = unit.unit;
 	console.log("\nsaving unit " + objUnit);
 	console.log(JSON.stringify(objUnit));
 	var cmds = [];
@@ -649,8 +630,20 @@ async function insertHistory(objUnit) {
 			);
 		}
 	}
-
-	return await db.executeTrans(cmds);
+	await mutex.lock(["write"], async function (unlock) {
+		try {
+			let i_result = await db.executeTrans(cmds);
+			if (!i_result) {
+				tran_bool = true;
+			}
+		}
+		catch (e) {
+			console.log(e);
+		}
+		finally {
+			await unlock();
+		}
+	});
 }
 
 
@@ -968,6 +961,5 @@ exports.processLinkProofs = processLinkProofs;
 exports.determineIfHaveUnstableJoints = determineIfHaveUnstableJoints;
 exports.prepareParentsAndLastBallAndWitnessListUnit = prepareParentsAndLastBallAndWitnessListUnit;
 exports.updateHistory = updateHistory;
-exports.insertHistory = insertHistory;
 
 

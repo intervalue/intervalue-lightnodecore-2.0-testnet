@@ -652,7 +652,7 @@ async function composeJointForJoint(params) {
 	var total_input;
 	var last_ball_mci;
 	var assocSigningPaths = {};
-	var unlock_callback;
+	var unlock_callback = function () { };
 	var conn;
 
 	var handleError = function (err) {
@@ -668,10 +668,7 @@ async function composeJointForJoint(params) {
 
 	await async.series([
 		function (cb) { // lock
-			mutex.lock(arrFromAddresses.map(function (from_address) { return 'c-' + from_address; }), function (unlock) {
-				unlock_callback = unlock;
-				cb();
-			});
+			cb();
 		},
 		function (cb) { // start transaction
 			db.takeConnectionFromPool(function (new_conn) {

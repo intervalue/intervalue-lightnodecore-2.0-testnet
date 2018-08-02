@@ -466,53 +466,51 @@ function saveJoint(objJoint, objValidationState, preCommitCallback, onDone) {
 		};
 
 		// without this locking, we get frequent deadlocks from mysql
-		mutex.lock(["write-joint"], function (unlock) {
-			console.log("got lock to write " + objUnit.unit);
-			storage.assocUnstableUnits[objUnit.unit] = objNewUnitProps;
-			addInlinePaymentQueries(function () {
-				async.series(arrQueries, function () {
-					profiler.stop('write-raw');
-					profiler.start();
-					var arrOps = [];
-					if (objUnit.parent_units) {
-						if (!conf.bLight) {
-							arrOps.push(updateBestParent);
-							arrOps.push(updateLevel);
-							arrOps.push(updateWitnessedLevel);
-							arrOps.push(function (cb) {
-								console.log("updating MC after adding " + objUnit.unit);
-								main_chain.updateMainChain(conn, null, objUnit.unit, cb);
-							});
-						}
-						if (preCommitCallback)
-							arrOps.push(function (cb) {
-								console.log("executing pre-commit callback");
-								preCommitCallback(conn, cb);
-							});
-					}
-					async.series(arrOps, function (err) {
-						profiler.start();
-						conn.query(err ? "ROLLBACK" : "COMMIT", function () {
-							conn.release();
-							console.log((err ? (err + ", therefore rolled back unit ") : "committed unit ") + objUnit.unit);
-							profiler.stop('write-commit');
-							profiler.increment();
-							if (err)
-								storage.resetUnstableUnits(unlock);
-							else
-								unlock();
-							if (!err)
-								eventBus.emit('saved_unit-' + objUnit.unit, objJoint);
-							if (onDone)
-								onDone(err);
-							count_writes++;
-							if (conf.storage === 'sqlite')
-								updateSqliteStats();
+		// mutex.lock(["write-joint"], function (unlock) {
+		console.log("got lock to write " + objUnit.unit);
+		storage.assocUnstableUnits[objUnit.unit] = objNewUnitProps;
+		addInlinePaymentQueries(function () {
+			async.series(arrQueries, function () {
+				profiler.stop('write-raw');
+				profiler.start();
+				var arrOps = [];
+				if (objUnit.parent_units) {
+					if (!conf.bLight) {
+						arrOps.push(updateBestParent);
+						arrOps.push(updateLevel);
+						arrOps.push(updateWitnessedLevel);
+						arrOps.push(function (cb) {
+							console.log("updating MC after adding " + objUnit.unit);
+							main_chain.updateMainChain(conn, null, objUnit.unit, cb);
 						});
+					}
+					if (preCommitCallback)
+						arrOps.push(function (cb) {
+							console.log("executing pre-commit callback");
+							preCommitCallback(conn, cb);
+						});
+				}
+				async.series(arrOps, function (err) {
+					profiler.start();
+					conn.query(err ? "ROLLBACK" : "COMMIT", function () {
+						conn.release();
+						console.log((err ? (err + ", therefore rolled back unit ") : "committed unit ") + objUnit.unit);
+						profiler.stop('write-commit');
+						profiler.increment();
+						if (err)
+							storage.resetUnstableUnits(function () { });
+						if (!err)
+							eventBus.emit('saved_unit-' + objUnit.unit, objJoint);
+						if (onDone)
+							onDone(err);
+						count_writes++;
+						if (conf.storage === 'sqlite')
+							updateSqliteStats();
 					});
 				});
 			});
 		});
+		// });
 
 	});
 }

@@ -185,7 +185,7 @@ function loginToHub() {
 }
 
 
-setInterval(loginToHub, RECONNECT_TO_HUB_PERIOD);
+// setInterval(loginToHub, RECONNECT_TO_HUB_PERIOD);
 eventBus.on('connected', loginToHub);
 
 function sendLoginCommand(ws, challenge) {
@@ -425,7 +425,7 @@ function resendStalledMessages(delay) {
 	});
 }
 
-setInterval(function () { resendStalledMessages(1); }, SEND_RETRY_PERIOD);
+// setInterval(function () { resendStalledMessages(1); }, SEND_RETRY_PERIOD);
 
 // reliable delivery
 // first param is either WebSocket or hostname of the hub
