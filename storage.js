@@ -1320,7 +1320,7 @@ function shrinkCache() {
 		}
 	});
 }
-setInterval(shrinkCache, 300 * 1000);
+// setInterval(shrinkCache, 300 * 1000);
 
 
 
