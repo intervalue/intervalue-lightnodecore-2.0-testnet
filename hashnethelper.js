@@ -39,7 +39,6 @@ class HashnetHelper {
     static initialLocalfullnodeList() {
         localfullnodes = [];
     }
-
     static async getLocalfullnodeList(pubKey) {
         try {
             let localfullnodeList = await webHelper.httpPost(device.my_device_hashnetseed_url + '/getLocalfullnodeListInShard/', null, buildData({ pubKey }));
@@ -93,7 +92,10 @@ class HashnetHelper {
         }
         if (localfullnodes.length < 5) {
             let { pubKey } = await device.getInfo();
-            localfullnodes = await HashnetHelper.getLocalfullnodeList(pubKey);
+            let localfullnodeList = await HashnetHelper.getLocalfullnodeList(pubKey);
+            if (localfullnodeList.length > 0) {
+                localfullnodes = localfullnodeList;
+            }
         }
     }
 
