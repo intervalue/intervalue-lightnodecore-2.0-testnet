@@ -429,9 +429,7 @@ async function updateHistory(addresses) {
 			await truncateTran();
 		}
 		else {
-			if (!unitList) {
-				unitList = await db.toList("select unit as unitId,is_stable as isStable, ( case when sequence = 'good' then 1 else 0 end ) as isValid from units");
-			}
+			await iniUnitList();
 			for (var tran of trans) {
 				let unit = _.find(unitList, { unitId: tran.unitId });
 				if (unit && tran.isStable == 1 && tran.isValid == 1 && unit.isStable != 1) {
@@ -464,8 +462,15 @@ function refreshUnitList(tran) {
 	}
 }
 
+async function iniUnitList() {
+	if (!unitList) {
+		unitList = await db.toList("select unit as unitId,is_stable as isStable, ( case when sequence = 'good' then 1 else 0 end ) as isValid from units");
+	}
+}
+
 async function truncateTran() {
-	let count = await db.single("select count(*) from units");
+	await iniUnitList();
+	let count = unitList.length;
 	let cmds = [];
 	if (count > 0) {
 		db.addCmd(cmds, "delete from inputs");
