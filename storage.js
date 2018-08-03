@@ -1357,7 +1357,7 @@ function resetUnstableUnits(onDone) {
 	initUnstableUnits(onDone);
 }
 
-mutex.lock(['write'], initUnstableUnits);
+// mutex.lock(['write'], initUnstableUnits);
 
 if (!conf.bLight)
 	archiveJointAndDescendantsIfExists('N6QadI9yg3zLxPMphfNGJcPfddW4yHPkoGMbbGZsWa0=');
