@@ -20,6 +20,7 @@ var writer = require('./writer.js');
 var conf = require('./conf.js');
 var profiler = require('./profiler.js');
 var device = require('./device.js');
+var light = require('./light.js');
 
 var TRANSFER_INPUT_SIZE = 0 // type: "transfer" omitted
 	+ 44 // unit
@@ -1438,6 +1439,7 @@ function getSavingCallbacksForJoint(callbacks) {
 									if (err)
 										return callbacks.ifError(err);
 									console.log("saved unit " + unit);
+									light.refreshUnitList({ unitId: objJoint.unit.unit, isStable: 0, isValid: 1 });
 									callbacks.ifOk(objJoint, assocPrivatePayloads);
 								}
 							);
@@ -1507,6 +1509,7 @@ function getSavingCallbacks(callbacks) {
 									if (err)
 										return callbacks.ifError(err);
 									console.log("saved unit " + unit);
+									writer
 									callbacks.ifOk(objJoint, assocPrivatePayloads);
 								}
 							);

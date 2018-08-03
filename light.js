@@ -18,6 +18,7 @@ var device = require('./device.js');
 var MAX_HISTORY_ITEMS = 1000;
 var hashnethelper = require('./hashnethelper');
 var conf = require("./conf.js");
+var _ = require("lodash");
 // unit's MC index is earlier_mci
 function buildProofChain(later_mci, earlier_mci, unit, arrBalls, onDone) {
 	if (earlier_mci === null)
@@ -398,6 +399,7 @@ function processHistory(objResponse, callbacks) {
 
 var u_finished = true;
 var tran_bool = false;
+let unitList = null;
 async function updateHistory(addresses) {
 	if (tran_bool) {
 		tran_bool = false;
@@ -427,17 +429,19 @@ async function updateHistory(addresses) {
 			await truncateTran();
 		}
 		else {
-
+			if (!unitList) {
+				unitList = await db.toList("select unit as unitId,is_stable as isStable, ( case when sequence = 'good' then 1 else 0 end ) as isValid from units");
+			}
 			for (var tran of trans) {
-				let unit = await db.first("select * from units where unit = ?", tran.unitId);
-				if (unit && tran.isStable == 1 && tran.isValid == 1 && unit.is_stable != 1) {
-					await updateTran(tran.unitId);
+				let unit = _.find(unitList, { unitId: tran.unitId });
+				if (unit && tran.isStable == 1 && tran.isValid == 1 && unit.isStable != 1) {
+					await updateTran(tran);
 				}
-				else if (unit && tran.isStable == 1 && unit.sequence == 'good' && tran.isValid == 0) {
-					await badTran(tran.unitId);
+				else if (unit && tran.isStable == 1 && tran.isValid == 0 && unit.isValid == 1) {
+					await badTran(tran);
 				}
 				else if (!unit && tran.isValid == 1) {
-					await insertTran(tran.unitId);
+					await insertTran(tran);
 				}
 			}
 		}
@@ -446,7 +450,18 @@ async function updateHistory(addresses) {
 		console.log(e);
 	}
 	finally { u_finished = true; }
+}
 
+function refreshUnitList(tran) {
+	let src_unit = _.find(unitList, { unitId: tran.unitId });
+	if (src_unit) {
+		src_unit.isStable = tran.isStable;
+		src_unit.isValid = tran.isValid;
+	}
+	else {
+		src_unit = { unitId: tran.unitId, isStable: tran.isStable, isValid: tran.isValid };
+		unitList.push(src_unit);
+	}
 }
 
 async function truncateTran() {
@@ -463,6 +478,7 @@ async function truncateTran() {
 			try {
 				let b_result = await db.executeTrans(cmds);
 				if (!b_result) {
+					unitList = [];
 					tran_bool = true;
 				}
 			}
@@ -476,10 +492,12 @@ async function truncateTran() {
 	}
 }
 
-async function updateTran(unitId) {
+async function updateTran(tran) {
+	let unitId = tran.unitId;
 	await mutex.lock(["write"], async function (unlock) {
 		try {
 			await db.execute("update units set is_stable = 1 where unit = ?", unitId);
+			refreshUnitList(tran);
 			tran_bool = true;
 		}
 		catch (e) {
@@ -491,7 +509,8 @@ async function updateTran(unitId) {
 	});
 }
 
-async function badTran(unitId) {
+async function badTran(tran) {
+	let unitId = tran.unitId;
 	let cmds = [];
 	let input = await db.first("select * from inputs where unit = ?", unitId);
 	if (input) {
@@ -512,6 +531,7 @@ async function badTran(unitId) {
 		try {
 			let b_result = await db.executeTrans(cmds);
 			if (!b_result) {
+				refreshUnitList(tran);
 				tran_bool = true;
 			}
 		}
@@ -524,7 +544,8 @@ async function badTran(unitId) {
 	});
 }
 
-async function insertTran(unitId) {
+async function insertTran(tran) {
+	let unitId = tran.unitId;
 	let unit = await hashnethelper.getUnitInfo(unitId);
 	let objUnit = unit.unit;
 	console.log("\nsaving unit " + objUnit);
@@ -634,6 +655,7 @@ async function insertTran(unitId) {
 		try {
 			let i_result = await db.executeTrans(cmds);
 			if (!i_result) {
+				refreshUnitList(tran);
 				tran_bool = true;
 			}
 		}
@@ -961,5 +983,7 @@ exports.processLinkProofs = processLinkProofs;
 exports.determineIfHaveUnstableJoints = determineIfHaveUnstableJoints;
 exports.prepareParentsAndLastBallAndWitnessListUnit = prepareParentsAndLastBallAndWitnessListUnit;
 exports.updateHistory = updateHistory;
+exports.unitList = unitList;
+exports.refreshUnitList = refreshUnitList;
 
 
