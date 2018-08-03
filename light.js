@@ -497,8 +497,10 @@ async function updateTran(tran) {
 	await mutex.lock(["write"], async function (unlock) {
 		try {
 			await db.execute("update units set is_stable = 1 where unit = ?", unitId);
-			refreshUnitList(tran);
-			tran_bool = true;
+			if (b_result.affectedRows) {
+				refreshUnitList(tran);
+				tran_bool = true;
+			}
 		}
 		catch (e) {
 			console.log(e);
