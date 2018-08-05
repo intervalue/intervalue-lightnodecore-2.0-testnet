@@ -554,6 +554,9 @@ async function badTran(tran) {
 async function insertTran(tran) {
 	let unitId = tran.unitId;
 	let unit = await hashnethelper.getUnitInfo(unitId);
+	if (!unit) {
+		return console.log("the unit can not get from net!");
+	}
 	let objUnit = unit.unit;
 	console.log("\nsaving unit " + objUnit);
 	console.log(JSON.stringify(objUnit));
@@ -642,7 +645,7 @@ async function insertTran(tran) {
 					if (addresses.indexOf(address) >= 0) {
 						let uobj = await db.single('select * from outputs WHERE is_spent=0 and unit=? AND message_index=? AND output_index=?', src_unit, src_message_index, src_output_index);
 						if (uobj == null) {
-							return "the source unit has spent or is not in db now!";
+							return console.log("the source unit has spent or is not in db now!");
 						}
 						db.addCmd(cmds,
 							"UPDATE outputs SET is_spent=1 WHERE unit=? AND message_index=? AND output_index=?",
