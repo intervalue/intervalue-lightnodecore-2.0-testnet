@@ -558,108 +558,107 @@ async function insertTran(tran) {
 	console.log("\nsaving unit " + objUnit);
 	console.log(JSON.stringify(objUnit));
 	var cmds = [];
+	await mutex.lock(["write"], async function (unlock) {
+		try {
+			var fields = "unit, version, alt, headers_commission, payload_commission, sequence, content_hash,is_stable";
+			var values = "?,?,?,?,?,?,?,?";
+			var params = [objUnit.unit, objUnit.version, objUnit.alt,
+			objUnit.headers_commission || 0, objUnit.payload_commission || 0, 'good', objUnit.content_hash, 1];
+			if (conf.bLight) {
+				fields += ", main_chain_index, creation_date";
+				values += ",?," + db.getFromUnixTime("?");
+				params.push(objUnit.main_chain_index, objUnit.timestamp);
+			}
+			db.addCmd(cmds, "INSERT INTO units (" + fields + ") VALUES (" + values + ")", ...params);
 
-	var fields = "unit, version, alt, headers_commission, payload_commission, sequence, content_hash,is_stable";
-	var values = "?,?,?,?,?,?,?,?";
-	var params = [objUnit.unit, objUnit.version, objUnit.alt,
-	objUnit.headers_commission || 0, objUnit.payload_commission || 0, 'good', objUnit.content_hash, 1];
-	if (conf.bLight) {
-		fields += ", main_chain_index, creation_date";
-		values += ",?," + db.getFromUnixTime("?");
-		params.push(objUnit.main_chain_index, objUnit.timestamp);
-	}
-	db.addCmd(cmds, "INSERT INTO units (" + fields + ") VALUES (" + values + ")", ...params);
-
-	var bGenesis = storage.isGenesisUnit(objUnit.unit);
-	if (bGenesis) {
-		db.addCmd(cmds,
-			"UPDATE units SET is_on_main_chain=1, main_chain_index=0, is_stable=1, level=0, witnessed_level=0 \n\
+			var bGenesis = storage.isGenesisUnit(objUnit.unit);
+			if (bGenesis) {
+				db.addCmd(cmds,
+					"UPDATE units SET is_on_main_chain=1, main_chain_index=0, is_stable=1, level=0, witnessed_level=0 \n\
 					WHERE unit=?", objUnit.unit);
-	}
-
-	var arrAuthorAddresses = [];
-	for (var i = 0; i < objUnit.authors.length; i++) {
-		var author = objUnit.authors[i];
-		arrAuthorAddresses.push(author.address);
-		var definition_chash = null;
-		db.addCmd(cmds, "INSERT INTO unit_authors (unit, address, definition_chash) VALUES(?,?,?)",
-			objUnit.unit, author.address, definition_chash);
-		if (bGenesis)
-			db.addCmd(cmds, "UPDATE unit_authors SET _mci=0 WHERE unit=?", objUnit.unit);
-		if (!objUnit.content_hash) {
-			for (var path in author.authentifiers) {
-				db.addCmd(cmds, "INSERT INTO authentifiers (unit, address, path, authentifier) VALUES(?,?,?,?)",
-					objUnit.unit, author.address, path, author.authentifiers[path]);
 			}
-		}
-	}
 
-	if (!objUnit.content_hash) {
-		for (var i = 0; i < objUnit.messages.length; i++) {
-			var message = objUnit.messages[i];
+			var arrAuthorAddresses = [];
+			for (var i = 0; i < objUnit.authors.length; i++) {
+				var author = objUnit.authors[i];
+				arrAuthorAddresses.push(author.address);
+				var definition_chash = null;
+				db.addCmd(cmds, "INSERT INTO unit_authors (unit, address, definition_chash) VALUES(?,?,?)",
+					objUnit.unit, author.address, definition_chash);
+				if (bGenesis)
+					db.addCmd(cmds, "UPDATE unit_authors SET _mci=0 WHERE unit=?", objUnit.unit);
+				if (!objUnit.content_hash) {
+					for (var path in author.authentifiers) {
+						db.addCmd(cmds, "INSERT INTO authentifiers (unit, address, path, authentifier) VALUES(?,?,?,?)",
+							objUnit.unit, author.address, path, author.authentifiers[path]);
+					}
+				}
+			}
 
-			var text_payload = null;
-			if (message.app === "text") {
-				text_payload = message.payload;
-			}
-			else if (message.app === "data" || message.app === "profile" || message.app === "attestation" || message.app === "definition_template") {
-				text_payload = JSON.stringify(message.payload);
-			}
-			db.addCmd(cmds, "INSERT INTO messages \n\
+			if (!objUnit.content_hash) {
+				for (var i = 0; i < objUnit.messages.length; i++) {
+					var message = objUnit.messages[i];
+
+					var text_payload = null;
+					if (message.app === "text") {
+						text_payload = message.payload;
+					}
+					else if (message.app === "data" || message.app === "profile" || message.app === "attestation" || message.app === "definition_template") {
+						text_payload = JSON.stringify(message.payload);
+					}
+					db.addCmd(cmds, "INSERT INTO messages \n\
 					(unit, message_index, app, payload_hash, payload_location, payload, payload_uri, payload_uri_hash) VALUES(?,?,?,?,?,?,?,?)",
-				objUnit.unit, i, message.app, message.payload_hash, message.payload_location, text_payload,
-				message.payload_uri, message.payload_uri_hash);
-		}
-	}
+						objUnit.unit, i, message.app, message.payload_hash, message.payload_location, text_payload,
+						message.payload_uri, message.payload_uri_hash);
+				}
+			}
 
-	for (var i = 0; i < objUnit.messages.length; i++) {
-		var message = objUnit.messages[i];
-		var payload = message.payload;
-		var denomination = payload.denomination || 1;
-		for (var j = 0; j < payload.inputs.length; j++) {
-			var input = payload.inputs[j];
-			var type = input.type || "transfer";
-			var src_unit = (type === "transfer") ? input.unit : null;
-			var src_message_index = (type === "transfer") ? input.message_index : null;
-			var src_output_index = (type === "transfer") ? input.output_index : null;
-			var from_main_chain_index = (type === "witnessing" || type === "headers_commission") ? input.from_main_chain_index : null;
-			var to_main_chain_index = (type === "witnessing" || type === "headers_commission") ? input.to_main_chain_index : null;
-			var is_unique = 1;
-			var address = (arrAuthorAddresses.length === 1) ? arrAuthorAddresses[0] : input.address;
-			db.addCmd(cmds, "INSERT INTO inputs \n\
+			for (var i = 0; i < objUnit.messages.length; i++) {
+				var message = objUnit.messages[i];
+				var payload = message.payload;
+				var denomination = payload.denomination || 1;
+				for (var j = 0; j < payload.inputs.length; j++) {
+					var input = payload.inputs[j];
+					var type = input.type || "transfer";
+					var src_unit = (type === "transfer") ? input.unit : null;
+					var src_message_index = (type === "transfer") ? input.message_index : null;
+					var src_output_index = (type === "transfer") ? input.output_index : null;
+					var from_main_chain_index = (type === "witnessing" || type === "headers_commission") ? input.from_main_chain_index : null;
+					var to_main_chain_index = (type === "witnessing" || type === "headers_commission") ? input.to_main_chain_index : null;
+					var is_unique = 1;
+					var address = (arrAuthorAddresses.length === 1) ? arrAuthorAddresses[0] : input.address;
+					db.addCmd(cmds, "INSERT INTO inputs \n\
 				(unit, message_index, input_index, type, \n\
 				src_unit, src_message_index, src_output_index, \
 				from_main_chain_index, to_main_chain_index, \n\
 				denomination, amount, serial_number, \n\
 				asset, is_unique, address) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-				objUnit.unit, i, j, type,
-				src_unit, src_message_index, src_output_index,
-				from_main_chain_index, to_main_chain_index,
-				denomination, input.amount, input.serial_number,
-				payload.asset, is_unique, address);
-			let { addresses } = await device.getInfo();
-			if (addresses.indexOf(address) >= 0) {
-				let uobj = await db.single('select * from outputs WHERE is_spent=0 and unit=? AND message_index=? AND output_index=?', src_unit, src_message_index, src_output_index);
-				if (uobj == null) {
-					return "the source unit has spent or is not in db now!";
+						objUnit.unit, i, j, type,
+						src_unit, src_message_index, src_output_index,
+						from_main_chain_index, to_main_chain_index,
+						denomination, input.amount, input.serial_number,
+						payload.asset, is_unique, address);
+					let { addresses } = await device.getInfo();
+					if (addresses.indexOf(address) >= 0) {
+						let uobj = await db.single('select * from outputs WHERE is_spent=0 and unit=? AND message_index=? AND output_index=?', src_unit, src_message_index, src_output_index);
+						if (uobj == null) {
+							return "the source unit has spent or is not in db now!";
+						}
+						db.addCmd(cmds,
+							"UPDATE outputs SET is_spent=1 WHERE unit=? AND message_index=? AND output_index=?",
+							src_unit, src_message_index, src_output_index
+						);
+					}
 				}
-				db.addCmd(cmds,
-					"UPDATE outputs SET is_spent=1 WHERE unit=? AND message_index=? AND output_index=?",
-					src_unit, src_message_index, src_output_index
-				);
-			}
-		}
-		for (var j = 0; j < payload.outputs.length; j++) {
-			var output = payload.outputs[j];
-			db.addCmd(cmds,
-				"INSERT INTO outputs \n\
+				for (var j = 0; j < payload.outputs.length; j++) {
+					var output = payload.outputs[j];
+					db.addCmd(cmds,
+						"INSERT INTO outputs \n\
 					(unit, message_index, output_index, address, amount, asset, denomination, is_serial) VALUES(?,?,?,?,?,?,?,1)",
-				objUnit.unit, i, j, output.address, parseInt(output.amount), payload.asset, denomination
-			);
-		}
-	}
-	await mutex.lock(["write"], async function (unlock) {
-		try {
+						objUnit.unit, i, j, output.address, parseInt(output.amount), payload.asset, denomination
+					);
+				}
+			}
 			let i_result = await db.executeTrans(cmds);
 			if (!i_result) {
 				refreshUnitList(tran);
