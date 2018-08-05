@@ -90,7 +90,7 @@ class HashnetHelper {
                 }
             });
         }
-        if (localfullnodes.length < 5) {
+        if (localfullnodes.length < 3) {
             let { pubKey } = await device.getInfo();
             let localfullnodeList = await HashnetHelper.getLocalfullnodeList(pubKey);
             if (localfullnodeList.length > 0) {
