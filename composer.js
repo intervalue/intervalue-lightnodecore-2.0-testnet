@@ -1379,6 +1379,7 @@ async function composeAndSaveMinimalJointForJoint(params) {
 			await unlock();
 		}
 	});
+	await mutex.sleep(2 * 1000);
 }
 
 function getSavingCallbacksForJoint(callbacks) {
