@@ -22,7 +22,7 @@ var my_device_hub;
 var my_device_name;
 var my_device_address;
 // var my_device_hashnetseed_url = "http://52.78.143.222:20002";//外网测试IP
-var my_device_hashnetseed_url = "http://35.159.25.129:20002";//外网正式IP
+var my_device_hashnetseed_url = "http://35.159.25.129:25003";//外网正式IP
 //var my_device_hashnetseed_url = "http://192.168.0.120:20002";//局域网IP
 var objMyPermanentDeviceKey;
 var objMyTempDeviceKey;
