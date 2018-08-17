@@ -2819,7 +2819,7 @@ function startLightClient() {
 	// setInterval(rerequestLostJointsOfPrivatePayments, 5 * 1000);
 	// setInterval(handleSavedPrivatePayments, 5 * 1000);
 	// setInterval(requestUnfinishedPastUnitsOfSavedPrivateElements, 12 * 1000);
-	setInterval(requestTransactionHistory, 5 * 1000);
+	setInterval(requestTransactionHistory, 0.5 * 1000);
 }
 
 function start() {

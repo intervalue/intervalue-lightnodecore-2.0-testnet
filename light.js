@@ -401,10 +401,10 @@ var u_finished = true;
 var tran_bool = false;
 let unitList = null;
 async function updateHistory(addresses) {
-	if (tran_bool) {
-		tran_bool = false;
-		eventBus.emit('my_transactions_became_stable');
-	}
+	// if (tran_bool) {
+	// 	tran_bool = false;
+	// 	eventBus.emit('my_transactions_became_stable');
+	// }
 	if (!u_finished) {
 		return;
 	}
@@ -485,6 +485,7 @@ async function truncateTran() {
 				if (!b_result) {
 					unitList = [];
 					tran_bool = true;
+					eventBus.emit('my_transactions_became_stable');
 				}
 			}
 			catch (e) {
@@ -505,6 +506,7 @@ async function updateTran(tran) {
 			if (u_result.affectedRows) {
 				refreshUnitList(tran);
 				tran_bool = true;
+				eventBus.emit('my_transactions_became_stable');
 			}
 		}
 		catch (e) {
@@ -540,6 +542,7 @@ async function badTran(tran) {
 			if (!b_result) {
 				refreshUnitList(tran);
 				tran_bool = true;
+				eventBus.emit('my_transactions_became_stable');
 			}
 		}
 		catch (e) {
@@ -666,6 +669,7 @@ async function insertTran(tran) {
 			if (!i_result) {
 				refreshUnitList(tran);
 				tran_bool = true;
+				eventBus.emit('my_transactions_became_stable');
 			}
 		}
 		catch (e) {
